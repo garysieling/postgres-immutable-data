@@ -293,20 +293,17 @@ INSERT INTO movies_audit VALUES (
 				</section>
 
 				<section data-transition="fade">
-					<h2>Works in Mobile Safari</h2>
-					<p>
-						Try it out! You can swipe through the slides and pinch your way to the overview.
-					</p>
-				</section>
-
-				<section data-transition="fade">
-					<h2>Marvelous Unordered List</h2>
+					<h2>Other Considerations</h2>
 					<ul>
-						<li>No order here</li>
-						<li>Or here</li>
-						<li>Or here</li>
-						<li>Or here</li>
+						<li>Global sequence number</li>
+						<li>Local sequence number</li>
+						<li>Vector clocks</li>
 					</ul>
+				 	<aside class="notes">
+						* (1) shows order of creation of every object in the system
+						* (2) can be used to tie specific versions of records in two tables
+						* (3) can be used to resolve conflicts in partitioned systems (mobile?)
+					</aside>					
 				</section>
 
 				<section data-transition="fade">
