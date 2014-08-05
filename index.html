@@ -58,6 +58,27 @@
 					<p>
 						<small>Created by <a href="http://www.garysieling.com/blog">Gary Sieling</a> / <a href="http://twitter.com/garysieling">@garysieling</a></small>
 					</p>
+          
+					<aside class="notes">
+						* Application Developer @ Wingspan Technology in Philadelphia
+            * Customer Support & DBA work
+					</aside>
+				</section>
+
+      	<section data-transition="fade">
+					<h2>Overview</h2>
+					<p>
+            * Functional programming movement encourages immutable data
+            * Regulators require audit trails
+            * End users are really bad at describing problems
+					</p>
+
+					<aside class="notes">
+            * The recent renewal of interest of functional programming in the software development community has spurred interest in immutable data structures, especially in databases.
+            * Post postgres conference - I saw a lot of people were interested in auditing from a banking perspective
+            * I'm in pharma
+            * Inspiration - combining these gives you ways you can help other teams save a lot of time           
+					</aside>
 				</section>
 
 				<section data-transition="fade">
@@ -68,6 +89,7 @@
 
 					<aside class="notes">
 						* Imagine you're an L1 engineer for Netflix
+            * Traditional auditing requirements are a natural starting point for discussing problems around immutable data. This talk will demonstrate how historical data stored in Postgres allows our customer service team to simulate having a debugger with a long time frame, allowing us to generate timelines of data changes, validate data corrections, and build complex analytics on system usage.
 					</aside>
 				</section>
 
@@ -119,6 +141,7 @@
 
 					<aside class="notes">
 						* Time-travelling debugger
+            *  Audit history typically provides a wealth of information, if you can sift through the noise. This talk discuss a variety of these issues: handling multiple overlapping time series, how to effectively filter data to points of interest, as well as performance and testing issues.
 					</aside>
 				</section>
 
@@ -152,66 +175,78 @@
 					<h2>Data Model</h2>
 					<p>
 					<pre><code data-trim>
-create table movies (
-  title text
-)
+create table movies (title text);
+
+create table movies$a (title text, audit_date timestamp(3));
+
+create trigger movies$t
+  after insert on movies 
+  for each row execute procedure audit();
+
+CREATE FUNCTION audit() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  EXECUTE
+    'INSERT INTO movies$a (text, audit_date) VALUES ($1.text, $2, $3);'
+END;
+$$;
 					</code></pre>
 					</p>
 
 					<aside class="notes">
-
+              * You can build this with logic but it will be a little slow
+              * Create one trigger per operation (insert / update / delete)
+              * Create one trigger per table (generate SQL)
+              * Do we need to force immutability with permissions?
 					</aside>
 				</section>
 
-				
-				<section data-transition="fade">
+        	<section data-transition="fade">
 					<h2>Data Model</h2>
 					<p>
-					<pre><code data-trim>
-create table movies (
-  title text,
-  license_owner text,
-  license_effective tsrange
-);
+             <ul>
+               <li>TG_OP - tells you operation type</li>
+             </ul>
+
+          	<pre><code data-trim>
+SELECT application_name 
+FROM pg_stat_activity 
+WHERE procpid = pg_backend_pid() 
+INTO v_context;
 					</code></pre>
+
 					</p>
 
 					<aside class="notes">
-						* Note use of range
+						* TG_OP - can record operation type and pick new vs old if you combine triggers
+            * application_name lets you inject context - could be current user or request guid             
 					</aside>
 				</section>
-
 						
 				<section data-transition="fade">
-					<h2>Data Model</h2>
-					<p>
-					<pre><code data-trim>
-create table movies_audit (
-  id int,
-  title text,
-  license_owner text,
-  license_effective tstzrange,
-  audit_user text,
-  audit_action text,
-  audit_date timestamp
-);
-					</code></pre>
-
-					</p>
-
+					<h2>Demo - Blame Tool</h2>
+					<ul>
+<pre><code data-trim>  
+SELECT * FROM (
+  SELECT audit_user, test
+  FROM movies$a
+  WHERE id = ...
+  ORDER BY audit_date DESC
+) LIMIT 1
+</code></pre>
+					</ul>
 					<aside class="notes">
-						* Note use of range
 					</aside>
 				</section>
 
-						<section data-transition="fade">
-					<h2>Ranges</h2>
+				<section data-transition="fade">
+					<h2>Generating Ranges (1 of 3)</h2>
 					<p>
 					<pre><code data-trim>
 select
   id, title
 from
-  movies_audit
+  movies_vw
 where 
   license_effective @> now()
 					</code></pre>
@@ -220,95 +255,78 @@ where
 
 					<aside class="notes">
 						* Note use of range
+            * Postgres provides a number of built-in features that support sophisticated analysis, such as time range operators and window functions. Since Postgres allows easy inspection of the database schema, these features are far more powerful when used in dynamic sql generated in stored procedures.					
+            * This will be the building blocks for everything coming
 					</aside>
 				</section>
 
-				<section data-transition="fade">
-					<h2>Inserts</h2>
-					<p>
-					<pre><code data-trim>
-CREATE RULE movie_insert AS ON INSERT
-TO movies_audit
-DO INSTEAD
-INSERT INTO movies_audit VALUES (
-  new.id,
-  new.title,
-  new.license_owner,
-  new.license_effective,
-  current_user,
-  'U',
-  now()  
-);
+        <section data-transition="fade">
+					<h2>Generating Ranges (2 of 3)</h2>
+					<pre><code data-trim>          
+  CREATE view movie_ranges AS 
+  SELECT
+    tsrange(
+      s.audit_date, 
+      coalesce(lead(s.audit_date) 
+                 over(
+                   partition by s.i_id 
+                   order by s.audit_date), 
+               'infinity'), 
+               '[)'
+    ) m_effective,
+    m.audit_date
+    movie.name,
+  FROM movie$a s
 					</code></pre>
 				 	<aside class="notes">
-						* Rewrite query
-					</aside>
-					</p>
-				</section>
+						* Note open / closed ranges
+            * Note finding next row in range
+            * Note 'infinity' in the beginning and end range
+          </aside>
+        </section>
 
 				<section data-transition="fade">
-					<h2>Updates</h2>
-					<p>
-					<pre><code data-trim>
-CREATE RULE movie_update AS ON UPDATE
-TO movies_audit
-DO INSTEAD
-INSERT INTO movies_audit VALUES (
-  new.id,
-  new.title,
-  new.license_owner,
-  new.license_effective,
-  current_user,
-  'U',
-  now()  
-);
-					</code></pre>
-				 	<aside class="notes">
-						* Rewrite query
-					</aside>
-					</p>
-				</section>
-
-				<section data-transition="fade">
-					<h2>Shadow Tables</h2>
+					<h2>Generating Ranges (3 of 3)</h2>
 					<ul>
-						<li>Add user</li>
-						<li>Add timestamp</li>
-						<li>Update effective range </li>
+<pre><code data-trim>                      
+WITH s as (
+  SELECT
+    *
+  FROM movie_vw s
+  LEFT JOIN (
+    license_vw 
+  ) l ON l.name = m.licensee
+),
+all_joined as (
+  SELECT
+    -- anything not found in a left join gets turned into an infinite range
+    coalesce(mis_effective, tsrange('-infinity', 'infinity', '[]')) mis_effective,
+    coalesce(mir_effective, tsrange('-infinity', 'infinity', '[]')) mir_effective,
+    greatest(s._audit_date_, r._audit_date_) _audit_date_,
+    s.tmf_level
+  FROM s
+  LEFT JOIN r ON s.id = r.id
+)
+select *
+from all_joined
+where ...
+					</code></pre>
 					</ul>
-				 	<aside class="notes">
-					  * Use 'application' field to pass the user to the application	
+					<aside class="notes">
+            * We're on 9.1 - don't have ranges
+            * Could update these in audit data
 					</aside>
-					</p>
 				</section>
 
-
-				<section data-transition="fade">
-					<h2>Deletes</h2>
-					<p>
-					<pre><code data-trim>
-CREATE RULE movie_delete AS ON DELETE
-TO movies_audit
-DO INSTEAD
-INSERT INTO movies_audit VALUES (
-  old.id,
-  null,
-  null,
-  null,
-  current_user,
-  'D',
-  now()  
-);
-					</code></pre>
-				 	<aside class="notes">
-						* Rewrite query
-					</aside>
-					</p>
-				</section>
-
-				<section data-transition="fade">
-					<h2>Demo - Blame Tool</h2>
+	<section data-transition="fade">
+					<h2>Demo - Blame Tool with Timestamp</h2>
 					<ul>
+<pre><code data-trim>  
+SELECT movie_user, license_user, test
+FROM movies_vw
+WHERE id = ...
+AND date_range <@ '12345'
+</code></pre>
 					</ul>
 					<aside class="notes">
 					</aside>
@@ -406,7 +424,7 @@ INSERT INTO movies_audit VALUES (
 				</section>
 
 				<section data-transition="fade">
-					<h2>Performance Considerations</h2>
+					<h2>Performance Considerations (1 of 2)</h2>
 					<ul>
 						<li>Unindexed data</li>
 						<li>Indexing strategy - Datomic</li>
@@ -415,6 +433,27 @@ INSERT INTO movies_audit VALUES (
 				 	<aside class="notes">
 						* Data is accessed rarely, and much larger than everything else
 						* Worth waiting for results, not maintaining indexes
+            * Run on a snapshot of the data
+            * Our data is relatively small, but audit data is a pain to copy locally
+            * You're usually most interested in recent audit data
+            * But Not that recently
+					</aside>
+				</section>
+
+        <section data-transition="fade">
+					<h2>Performance Considerations (1 of 2)</h2>
+					<ul>
+						<li>Unindexed data</li>
+						<li>Indexing strategy - Datomic</li>
+						<li>Full text search - Splunk</li>
+					</ul>
+				 	<aside class="notes">
+						* Data is accessed rarely, and much larger than everything else
+						* Worth waiting for results, not maintaining indexes
+            * Run on a snapshot of the data
+            * Our data is relatively small, but audit data is a pain to copy locally
+            * You're usually most interested in recent audit data
+            * But Not that recently
 					</aside>
 				</section>
 
