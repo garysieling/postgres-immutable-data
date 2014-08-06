@@ -270,6 +270,20 @@ INSERT INTO movies_audit VALUES (
 				</section>
 
 				<section data-transition="fade">
+					<h2>Shadow Tables</h2>
+					<ul>
+						<li>Add user</li>
+						<li>Add timestamp</li>
+						<li>Update effective range </li>
+					</ul>
+				 	<aside class="notes">
+					  * Use 'application' field to pass the user to the application	
+					</aside>
+					</p>
+				</section>
+
+
+				<section data-transition="fade">
 					<h2>Deletes</h2>
 					<p>
 					<pre><code data-trim>
@@ -316,6 +330,20 @@ INSERT INTO movies_audit VALUES (
 					</aside>
 				</section>	
 
+  			<section data-transition="fade">
+					<h2>Things Postgres Gives Us</h2>
+					<ul>
+						<li>Ranges</li>
+						<li>Named window functions</li>
+						<li>Array aggregation</li>
+						<li>Triggers</li>
+					</ul>
+					<aside class="notes">
+						* Wishlist - append only data
+						* Update single cell in a row
+					</aside>
+				</section>	
+
 				<section data-transition="fade">
 					<h2>Joins</h2>
 					<ul>
@@ -325,6 +353,59 @@ INSERT INTO movies_audit VALUES (
 					</ul>
 					<aside class="notes">
 						* http://en.wikipedia.org/wiki/Allen%27s_interval_algebra#Relations
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>Data Corrections</h2>
+					<ul>
+					</ul>
+					<aside class="notes">
+						* Sometimes we need audit data for the data correction
+						* We'd need the audit data to re-undo
+						* We need audit data to find out what someone did
+					</aside>
+				</section>
+				
+				<section data-transition="fade">
+					<h2>SQL Features (1 of ...)</h2>
+					<ul>
+						<li>X except Y</li>
+					</ul>
+					<aside class="notes">
+						* Good for speed
+						* Good for comparisons
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>SQL Features (1 of ...)</h2>
+					<ul>
+						<li>Indexes as materialized views</li>
+					</ul>
+					<aside class="notes">
+						* http://en.wikipedia.org/wiki/Allen%27s_interval_algebra#Relations
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>SQL Features (1 of ...)</h2>
+					<ul>
+						<li>SELECT FROM function</li>
+					</ul>
+					<aside class="notes">
+						* Goal is to provide an API for support team
+						* 4-12 hours to answer a support ticket
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>SQL Features (1 of ...)</h2>
+					<ul>
+						<li>Named window</li>
+						<li>Lead / Lag</li>
+					</ul>
+					<aside class="notes">
 					</aside>
 				</section>
 
@@ -340,6 +421,19 @@ INSERT INTO movies_audit VALUES (
 						* Worth waiting for results, not maintaining indexes
 					</aside>
 				</section>
+
+					<section data-transition="fade">
+					<h2>Minutea</h2>
+					<ul>
+						<li>Word replaces characters</li>
+						<li>Leading / trailing spaces</li>
+						<li>Nulls / spaces / empty string</li>
+					</ul>
+				 	<aside class="notes">
+						* Valid for support
+					</aside>
+				</section>
+
 				<section data-transition="fade">
 					<h2>Other Considerations</h2>
 					<ul>

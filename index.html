@@ -68,9 +68,10 @@
       	<section data-transition="fade">
 					<h2>Overview</h2>
 					<p>
-            * Functional programming movement encourages immutable data
-            * Regulators require audit trails
-            * End users are really bad at describing problems
+					<ul>
+						<li>Functional programming movement encourages immutable data</li>
+						<li>Regulators require audit trails</li>
+						<li>End users are really bad at describing problems</li>
 					</p>
 
 					<aside class="notes">
@@ -142,7 +143,8 @@
 					<aside class="notes">
 						* Time-travelling debugger
             *  Audit history typically provides a wealth of information, if you can sift through the noise. This talk discuss a variety of these issues: handling multiple overlapping time series, how to effectively filter data to points of interest, as well as performance and testing issues.
-					</aside>
+						* Heap analytics shows every click, which is richer
+		</aside>
 				</section>
 
 				
@@ -187,7 +189,7 @@ CREATE FUNCTION audit() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   EXECUTE
-    'INSERT INTO movies$a (text, audit_date) VALUES ($1.text, $2, $3);'
+    'INSERT INTO movies$a (text, audit_date) VALUES ($1.text, $2);'
 END;
 $$;
 					</code></pre>
@@ -198,6 +200,7 @@ $$;
               * Create one trigger per operation (insert / update / delete)
               * Create one trigger per table (generate SQL)
               * Do we need to force immutability with permissions?
+							* where is 'new'
 					</aside>
 				</section>
 
@@ -282,6 +285,7 @@ where
 						* Note open / closed ranges
             * Note finding next row in range
             * Note 'infinity' in the beginning and end range
+						* TODO: -infinity is missing
           </aside>
         </section>
 
@@ -313,6 +317,7 @@ where ...
 					</code></pre>
 					</ul>
 					<aside class="notes">
+						* TODO: create license
             * We're on 9.1 - don't have ranges
             * Could update these in audit data
 					</aside>
@@ -329,6 +334,9 @@ AND date_range <@ '12345'
 </code></pre>
 					</ul>
 					<aside class="notes">
+						* TODO this requires multiple columns in the result set
+						* Next slide should be the stored procedure approach
+
 					</aside>
 				</section>
 
@@ -337,6 +345,8 @@ AND date_range <@ '12345'
 					<ul>
 					</ul>
 					<aside class="notes">
+						* Use Except
+						* We use for tuning views
 					</aside>
 				</section>	
 
@@ -377,8 +387,12 @@ AND date_range <@ '12345'
 				<section data-transition="fade">
 					<h2>Data Corrections</h2>
 					<ul>
+						Can we roll back?
 					</ul>
 					<aside class="notes">
+						* Sometimes we need audit data for the data correction
+						* We'd need the audit data to re-undo
+						* We need audit data to find out what someone did
 					</aside>
 				</section>
 				
@@ -410,6 +424,7 @@ AND date_range <@ '12345'
 					</ul>
 					<aside class="notes">
 						* Goal is to provide an API for support team
+						* 4-12 hours to answer a support ticket
 					</aside>
 				</section>
 
@@ -424,7 +439,7 @@ AND date_range <@ '12345'
 				</section>
 
 				<section data-transition="fade">
-					<h2>Performance Considerations (1 of 2)</h2>
+					<h2>Performance Considerations</h2>
 					<ul>
 						<li>Unindexed data</li>
 						<li>Indexing strategy - Datomic</li>
@@ -440,23 +455,15 @@ AND date_range <@ '12345'
 					</aside>
 				</section>
 
-        <section data-transition="fade">
-					<h2>Performance Considerations (1 of 2)</h2>
+				<section data-transition="fade">
+					<h2>Alternate structures</h2>
+					<p>
 					<ul>
-						<li>Unindexed data</li>
-						<li>Indexing strategy - Datomic</li>
-						<li>Full text search - Splunk</li>
+						<li>Single table</li>
+						<li>Query rewriting</li>
 					</ul>
-				 	<aside class="notes">
-						* Data is accessed rarely, and much larger than everything else
-						* Worth waiting for results, not maintaining indexes
-            * Run on a snapshot of the data
-            * Our data is relatively small, but audit data is a pain to copy locally
-            * You're usually most interested in recent audit data
-            * But Not that recently
-					</aside>
+					</p>
 				</section>
-
 					<section data-transition="fade">
 					<h2>Minutea</h2>
 					<ul>
