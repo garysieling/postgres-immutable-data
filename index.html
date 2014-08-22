@@ -203,6 +203,22 @@ $$;
 					</aside>
 				</section>
 
+				<section data-transition="fade">
+					<h2>Procedures witin Procedures</h2>
+					<p>
+					<pre><code data-trim>
+...procedures within procedures...
+					</code></pre>
+					</p>
+
+					<aside class="notes">
+						* Can turn off these triggers during migrations
+						* May want be able create large load system
+					</aside>
+				</section>
+
+
+
         	<section data-transition="fade">
 					<h2>Data Model</h2>
 					<p>
@@ -215,6 +231,8 @@ SELECT application_name
 FROM pg_stat_activity 
 WHERE procpid = pg_backend_pid() 
 INTO v_context;
+
+...or create a table...
 					</code></pre>
 
 					</p>
@@ -228,7 +246,7 @@ INTO v_context;
 				<section data-transition="fade">
 					<h2>Demo - Blame Tool</h2>
 					<ul>
-<pre><code data-trim>  
+          	<pre><code data-trim>
 SELECT * FROM (
   SELECT audit_user, test
   FROM movies$a
@@ -321,6 +339,22 @@ where ...
             * Could update these in audit data
 					</aside>
 				</section>
+
+				<section data-transition="fade">
+					<h2>Generating Ranges (3 of 3)</h2>
+					<ul>
+<pre><code data-trim>                      
+...show overlapping of ranges...
+...picture...
+</code></pre>
+					</ul>
+					<aside class="notes">
+						* TODO: create license
+            * We're on 9.1 - don't have ranges
+            * Could update these in audit data
+					</aside>
+				</section>
+
 
 	<section data-transition="fade">
 					<h2>Demo - Blame Tool with Timestamp</h2>
