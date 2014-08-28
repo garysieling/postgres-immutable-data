@@ -3,16 +3,18 @@ create schema tenant1;
 set search_path to tenant1;
 
 create table movies (
-  id int,
+  id int primary key,
   title text
 );
 
 create table licenses (
-  id int,
+  id int primary key,
+  movie_id int references movies (id),
   title text, 
   start_date timestamp, 
   end_date timestamp
 );
+
 
 create or replace function get_request_id() returns varchar
 language plpgsql AS $$
@@ -77,9 +79,9 @@ begin
     loop     
       type := cols.data_type;   
       
-      columns_list := cols.column_name || ', ';
-      columns_insert := '$1.' || cols.column_name || ', ';
-      columns_type := cols.column_name || ' ' || type || ', ';
+      columns_list := columns_list || cols.column_name || ', ';
+      columns_insert := columns_insert || '$1.' || cols.column_name || ', ';
+      columns_type := columns_type || cols.column_name || ' ' || type || ', ';
     end loop;
 
     columns_list := 
@@ -180,6 +182,8 @@ begin
 end;
 $$;
 
+create sequence id_seq;
+
 -- Queries to test creation of triggers
 drop table tenant1.movies$a cascade;
 drop table tenant1.licenses$a cascade;
@@ -188,13 +192,34 @@ select create_triggers();
 
 set application_name to 'request_1,gary';
 
-insert into movies(id, title) values (1, 'Star Wars');
+insert into movies(id, title) 
+values (nextval(current_schema || '.id_seq'), 'Star Wars');
+
+insert into licenses (id, movie_id, title, start_date, end_date)
+values(nextval(current_schema || '.id_seq'), 1, 'Disney', '01-01-2000'::timestamp, '03-01-2000'::timestamp);
+
+select * 
+from movies m, licenses l
+where m.id = l.movie_id;
 
 set application_name to 'request_2,gary';
 
-update movies set id = 2;
+update movies 
+set title = 'Star Wars - Phantom Menace' 
+where title = 'Star Wars';
+
+set application_name to 'request_3,greg';
+delete from licenses;
 delete from movies;
+
 select * from tenant1.movies$a;
+select * from tenant1.licenses$a;
+
+select * 
+from tenant1.movies$a m,
+     tenant1.licenses$a l
+where l.movie_id = m.id;
+
 
 -- Create data...
 
@@ -202,7 +227,7 @@ select * from tenant1.movies$a;
 
 -- Blame query
 SELECT * FROM (
-  SELECT audit_user, test
+  SELECT *
   FROM movies$a
   WHERE id = ...
   ORDER BY audit_date DESC
