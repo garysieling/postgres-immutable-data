@@ -1,3 +1,4 @@
+drop schema tenant1 cascade;
 create schema tenant1;
 set search_path to tenant1;
 
@@ -12,6 +13,26 @@ create table licenses (
   start_date timestamp, 
   end_date timestamp
 );
+
+create or replace function get_request_id() returns varchar
+language plpgsql AS $$
+declare
+  context varchar;
+begin
+  select application_name from pg_stat_activity where pid = pg_backend_pid() INTO context;
+  return split_part(context, ',', 1);
+end;
+$$;
+
+create or replace function get_user_id() returns varchar
+language plpgsql AS $$
+declare
+  context varchar;
+begin
+  select application_name from pg_stat_activity where pid = pg_backend_pid() INTO context;
+  return split_part(context, ',', 2);
+end;
+$$;
 
 -- Create audit triggers
 create or replace function create_triggers() returns void
@@ -87,7 +108,8 @@ begin
        'create table %s$a
         as select t.*, 
              null::varchar(1) audit_action,
-             null::varchar audit_context, 
+             null::varchar audit_request,             
+             null::varchar audit_user, 
              null::timestamp audit_date
            from %s t 
            where 0 = 1',
@@ -113,14 +135,12 @@ begin
             declare
               context text;
             begin
-              select application_name from pg_stat_activity where pid = pg_backend_pid() INTO context;
-
               execute 
                 ''insert into %I$a 
-                    (%s, audit_action, audit_context, audit_date)
+                    (%s, audit_action, audit_request, audit_user, audit_date)
                   values
-                    (%s, $2, $3, $4)''
-                  using %s, ''%s'', context, now();
+                    (%s, $2, $3, $4, $5)''
+                  using %s, ''%s'', get_request_id(), get_user_id(), now();
 
                return %I;
             end;
@@ -166,13 +186,12 @@ drop table tenant1.licenses$a cascade;
 
 select create_triggers();
 
-select * 
-from information_schema.tables
-where 1=1 --table_name like '%$a%' 
-and table_schema = current_schema
+set application_name to 'request_1,gary';
 
-select * from movies;
 insert into movies(id, title) values (1, 'Star Wars');
+
+set application_name to 'request_2,gary';
+
 update movies set id = 2;
 delete from movies;
 select * from tenant1.movies$a;
@@ -180,12 +199,6 @@ select * from tenant1.movies$a;
 -- Create data...
 
 -- Test queries
-
-SELECT application_name 
-FROM pg_stat_activity 
-WHERE procpid = pg_backend_pid() 
-INTO v_context;
-
 
 -- Blame query
 SELECT * FROM (
@@ -265,5 +278,6 @@ SELECT movie_user, license_user, test
 FROM movies_vw
 WHERE id = ...
 AND date_range <@ '12345'
+
 
 
