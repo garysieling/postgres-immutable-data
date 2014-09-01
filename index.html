@@ -90,6 +90,10 @@
 					<aside class="notes">
 						* Imagine you're an L1 engineer for Netflix
             * Traditional auditing requirements are a natural starting point for discussing problems around immutable data. This talk will demonstrate how historical data stored in Postgres allows our customer service team to simulate having a debugger with a long time frame, allowing us to generate timelines of data changes, validate data corrections, and build complex analytics on system usage.
+						* The real problems are working under pressure (late at night, while an important client is waiting, or in a regulated environment)
+						* Need to be able to install confidence- automate as much of testing/writing queries as you can; pre-write queries and re-use
+						* Why data-corrections? Happen because of defects (bad data feed, application defect, design changes over time, defects in migration scripts, data maintained in separate systems)
+						* Getting queries right is key - sometimes data is not indexed in a convenient way (I'm solving a team structure problem rather than a database problem)
 					</aside>
 				</section>
 
@@ -285,6 +289,22 @@ SELECT * FROM (
 </code></pre>
 					</ul>
 					<aside class="notes">
+					</aside>
+				</section>
+
+								
+				<section data-transition="fade">
+					<h2>Demo - Rollback Tool</h2>
+					<ul>
+          	<pre><code data-trim>
+</code></pre>
+					</ul>
+					<aside class="notes">
+						* Need to order by foreign keys
+						* Useful to have it print out queries + manual intervention
+						* Check just changes?
+						* Disable triggers or rules?
+						* Performance is key - need to filter rows up front
 					</aside>
 				</section>
 
