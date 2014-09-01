@@ -1,5 +1,4 @@
-drop schema tenant1 cascade;
-create schema tenant1;
+g`"create schema tenant1;
 set search_path to tenant1;
 
 create table movies (
@@ -255,6 +254,45 @@ from
 ) b
 WHERE title$r = 1
 ;
+
+
+-- this finds the row that changed
+-- updates are the interesting case 
+-- for a delete or an insert, you're 
+-- just replicating the row or deleting it
+select * from movies$a 
+where audit_request = 'request_2' 
+and audit_action = 'U'
+
+-- valuable to insert an integer that represents 
+-- the revision number for an entity because it avoids this
+select * from (
+  select m.*, dense_rank() over (partition by id order by audit_date desc) audit_date$r
+  from movies$a m
+  where audit_date <= '2014-08-27 22:46:45.033'::timestamp
+) a
+where audit_date$r in (1, 2)
+;
+
+-- check columns that changed
+select * from (
+  select m.*, dense_rank() over (partition by id order by audit_date desc) audit_rank
+  from movies$a m
+  where audit_date <= '2014-08-27 22:46:45.033'::timestamp
+) a
+where audit_rank in (1, 2)
+
+-- logic: see which columns changed, then build an update
+-- realistically you need this procedure to print out
+-- the query for you. trying to solve this for all possible
+-- scenarios is impossible, but getting a starting point
+-- in the right order is awesome and gets you most of the
+-- way there
+update movies
+set title = '', something = ''
+where id = 1 
+from movies$a
+
 
 -- Range test
 select
