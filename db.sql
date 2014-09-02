@@ -255,6 +255,9 @@ from
 WHERE title$r = 1
 ;
 
+-- Rollback
+
+-- triggers? foreign keys?
 
 -- this finds the row that changed
 -- updates are the interesting case 
