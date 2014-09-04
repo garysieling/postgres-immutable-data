@@ -1,4 +1,5 @@
-g`"create schema tenant1;
+drop schema tenant1 cascade
+create schema tenant1;
 set search_path to tenant1;
 
 create table movies (
@@ -109,7 +110,8 @@ begin
        'create table %s$a
         as select t.*, 
              null::varchar(1) audit_action,
-             null::varchar audit_request,             
+             null::varchar audit_request,
+						 null::bigint audit_txid,
              null::varchar audit_user, 
              null::timestamp audit_date
            from %s t 
@@ -138,10 +140,10 @@ begin
             begin
               execute 
                 ''insert into %I$a 
-                    (%s, audit_action, audit_request, audit_user, audit_date)
+                    (%s, audit_action, audit_request, audit_txid, audit_user, audit_date)
                   values
-                    (%s, $2, $3, $4, $5)''
-                  using %s, ''%s'', get_request_id(), get_user_id(), now();
+                    (%s, $2, $3, $4, $5, $6)''
+                  using %s, ''%s'', get_request_id(), txid_current(), get_user_id(), now();
 
                return %I;
             end;
@@ -295,6 +297,94 @@ update movies
 set title = '', something = ''
 where id = 1 
 from movies$a
+
+
+-- this lets you roll back a past transaction
+-- all the arguments are optional, but it will
+-- be faster if you choose to rollback less
+select undo(517093, 'request_2', null, null, null, array['movies$a', 'licenses$a']);
+
+create or replace function undo(
+  audit_txid bigint, audit_request varchar, audit_action varchar, audit_user varchar, audit_interval interval, audit_tables varchar[]
+) returns void
+language plpgsql AS $$
+declare
+  tables record;
+  audits record;
+
+  where_clause text;
+  table_name text;
+  from_sql text;
+  to_sql text;
+  undo_sql text;
+
+  columns_list text;
+  columns_type text;
+  columns_insert text;
+begin
+  where_clause := 'WHERE 1=1';
+  if (audit_txid is not null) then
+    where_clause := where_clause || ' AND audit_txid = ' || audit_txid;
+  end if;
+
+  if (audit_request is not null) then
+    where_clause := where_clause || ' AND audit_request = ''' || format('%I', audit_request) || '''';
+  end if;
+
+  if (audit_action is not null) then
+    where_clause := where_clause || ' AND audit_action = ''' || format('%I', audit_action) || '''';
+  end if;
+
+  if (audit_user is not null) then
+    where_clause := where_clause || ' AND audit_user = ''' || format('%I', audit_user) || '''';
+  end if;
+
+  if (audit_interval is not null) then
+    where_clause := where_clause || ' AND audit_interval <% interval ''' || format('%I', audit_interval) || '''';
+  end if;
+
+  for tables in 
+    select * 
+    from information_schema.tables t
+    where t.table_name like '%$a' 
+      and t.table_schema = current_schema
+      and (audit_tables is null or t.table_name = any (audit_tables))
+  loop  
+    table_name = current_schema || '.' || format('%I', tables.table_name);
+
+    from_sql := 
+      format(
+'select a.*
+from %s a
+%s
+',
+       tables.table_name,
+       where_clause
+    );
+
+    for audits in execute from_sql
+    loop 
+      raise notice '%', from_sql;
+      execute from_sql;
+
+      to_sql := 
+        format(
+'select a.*
+from %s a
+where audit_date < ''%s''::timestamp
+order by audit_date desc
+limit 1',
+         tables.table_name,
+         audits.audit_date
+      );   
+
+      raise notice '%', to_sql;
+      execute to_sql;
+    end loop;
+  end loop;
+end;
+$$;
+
 
 
 -- Range test
