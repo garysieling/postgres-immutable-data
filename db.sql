@@ -250,9 +250,9 @@ from
       audit_action
     from movies$a
     where audit_action in ('I', 'U')
-    WINDOW w AS ( PARTITION by id ORDER BY audit_date DESC )
+    WINDOW w AS ( PARTITION by id ORDER BY audit_date DESC)
   ) a
-  WINDOW y AS ( PARTITION by id ORDER BY audit_date DESC, title$c DESC )
+  WINDOW y AS ( PARTITION by id ORDER BY audit_date DESC, title$c DESC)
 ) b
 WHERE title$r = 1
 ;

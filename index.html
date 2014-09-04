@@ -33,10 +33,9 @@
 <style>
 
 .reveal img, .reveal video, .reveal iframe {
-	max-width: 150%;
+	width: 150%;
 	max-height: 150%;
   position:relative;
-	left: -25%;
 }
 
 		</style>
@@ -162,7 +161,6 @@
 						* Time-travelling debugger
 					</aside>
 				</section>
-
 			
        	<section data-transition="fade">
 					<h2>The Problem</h2>
@@ -174,11 +172,42 @@
 						* Time-travelling debugger
 					</aside>
 				</section>
-	
 
 
-       <section data-transition="fade">
-					<h2>Design Considerations (1 of 2)</h2>
+ 
+        <section data-transition="fade">
+					<h2>Design Considerations (1 of x)</h2>
+					<p>
+            <img src="git-extensions-history.png" />
+					</p>
+
+					<aside class="notes">
+					</aside>
+        </section>
+
+        <section data-transition="fade">
+					<h2>Design Considerations (1 of x)</h2>
+					<p>
+            <img src="wp-audit-log.png" />
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+
+        
+        <section data-transition="fade">
+					<h2>Design Considerations (1 of x)</h2>
+					<p>
+            <img src="git-extensions-commands.png" />
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+
+        <section data-transition="fade">
+					<h2>Design Considerations (1 of x)</h2>
 					<p>
              <ul>
                <li>Request context (user/guid)</li>
@@ -189,19 +218,6 @@
 					</p>
 
 					<aside class="notes">
-					</aside>
-				</section>
-
-        <section data-transition="fade">
-					<h2>Design Considerations (2 of 2)</h2>
-					<p>
-             <ul>
-               <li>Regulatory - usernames</li>
-             </ul>
-					</p>
-
-					<aside class="notes">
-            TODO
 					</aside>
 				</section>
 
@@ -240,7 +256,22 @@ $$;
 					<h2>Procedures witin Procedures</h2>
 					<p>
 					<pre><code data-trim>
-...procedures within procedures...
+   table_name = current_schema || '.' || format('%I', tables.table_name);
+
+    table_sql := 
+      format(
+       'create table %s$a
+        as select t.*, 
+             null::varchar(1) audit_action,
+             null::varchar audit_request,
+             null::bigint audit_txid,
+             null::varchar audit_user, 
+             null::timestamp audit_date
+           from %s t 
+           where 0 = 1',
+       table_name,
+       table_name
+    );
 					</code></pre>
 					</p>
 
@@ -250,22 +281,20 @@ $$;
 					</aside>
 				</section>
 
-
-
-        	<section data-transition="fade">
+        <section data-transition="fade">
 					<h2>Data Model</h2>
 					<p>
-             <ul>
-               <li>TG_OP - tells you operation type</li>
-             </ul>
+          <pre><code data-trim>
+SELECT txid_current(); 
+					</code></pre>
 
-          	<pre><code data-trim>
-SELECT application_name 
+          <pre><code data-trim>
+SELECT 
+  split_part(application_name, ',', 1) user,
+  split_part(application_name, ',', 2) request
 FROM pg_stat_activity 
 WHERE procpid = pg_backend_pid() 
 INTO v_context;
-
-...or create a table...
 					</code></pre>
 
 					</p>
@@ -275,36 +304,82 @@ INTO v_context;
             * application_name lets you inject context - could be current user or request guid             
 					</aside>
 				</section>
-						
-				<section data-transition="fade">
-					<h2>Demo - Blame Tool</h2>
-					<ul>
-          	<pre><code data-trim>
-SELECT * FROM (
-  SELECT audit_user, test
-  FROM movies$a
-  WHERE id = ...
-  ORDER BY audit_date DESC
-) LIMIT 1
+			
+	<section data-transition="fade">
+					<h2>Demo - Blame Tool (x of x)</h2>
+          <pre><code data-trim>
+select a.*
+      (title <> lead(title) over w) title$c,
+from movies$a a
+where audit_action in ('I', 'U')
+window w as (partition by id order by audit_date desc)
 </code></pre>
-					</ul>
 					<aside class="notes">
 					</aside>
 				</section>
 
+        <section data-transition="fade">
+					<h2>Demo - Blame Tool (x of x)</h2>
+          <pre><code data-trim>
+with history as (...)
+
+select history.*,
+  (case when (title <> lead(title) over y) 
+   then audit_user else null end) title$u, 
+  dense_rank() over y title$r
+
+from history
+
+window y as (
+  partition by id order by audit_date desc, title$c desc)
+) b
+</code></pre>
+					<aside class="notes">
+					</aside>
+				</section>
+
+     <section data-transition="fade">
+					<h2>Demo - Blame Tool (x of x)</h2>
+          <pre><code data-trim>
+with history as (...),
+     ordered_history as (...)
+
+select * 
+from ordered_history 
+where title$r = 1
+</code></pre>
+					<aside class="notes">
+					</aside>
+				</section>        
 								
 				<section data-transition="fade">
 					<h2>Demo - Rollback Tool</h2>
-					<ul>
           	<pre><code data-trim>
+from_sql := 
+  format(
+'-- query to find what to undo
+select %s, b.*
+from (
+  select a.*,
+         %s
+  from %s a
+  window w as (partition by id order by audit_date desc)
+) b
+%s
+order by audit_date desc
+',
+  per_column('%% <> ${column}$p as ${column}$c', table, reserved_columns),
+  per_column('lead(${column}) over w ${column}$p', table, reserved_columns),
+  table,
+  where_clause
+);
 </code></pre>
-					</ul>
 					<aside class="notes">
-						* Need to order by foreign keys
-						* Useful to have it print out queries + manual intervention
-						* Check just changes?
-						* Disable triggers or rules?
-						* Performance is key - need to filter rows up front
+            * Things to note: comment at the beginning
+            * Previous code was impossible to read
+            * Need function oriented code (array -> string)
+            * Needs to work by taking working sql -> templatize
+            * Need to run build script, backup schema, checkin
 					</aside>
 				</section>
 
