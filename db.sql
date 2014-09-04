@@ -299,10 +299,61 @@ where id = 1
 from movies$a
 
 
--- this lets you roll back a past transaction
--- all the arguments are optional, but it will
--- be faster if you choose to rollback less
+drop function per_column(
+  snippet varchar, search_table varchar, search_schema varchar
+) 
+
+
+
+create or replace function per_column(
+  snippet varchar, search_schema varchar, search_table varchar, skip varchar[]
+) returns varchar
+language plpgsql AS $$
+declare
+  result varchar;
+  cols record;
+begin
+  result := '';
+  
+  for cols in
+    select * 
+    from information_schema.columns c
+    where c.table_name = search_table
+      and c.table_schema = search_schema
+      and not (c.column_name = any (skip))
+    order by ordinal_position
+  loop     
+    result := result || 
+      replace(snippet, '${column}', cols.column_name) || ', ';          
+  end loop;
+
+  result := 
+    substring(
+      result 
+      from 0 
+      for length(result) - 1);
+  
+  return result;
+end;
+$$;
+
+select per_column('${column}$c'::varchar, current_schema::varchar, 'movies'::varchar, array['title'::varchar]) 
+
+-- query to find what to undo
+ -- query to find what to undo
+select (case when id <> id$p then 1 else 0 end) as id$c, (case when title <> title$p then 1 else 0 end) as title$c, (case when audit_date <> audit_date$p then 1 else 0 end) as audit_date$c, b.*
+from (
+  select a.*,
+         lead(id) over w id$p, lead(title) over w title$p, lead(audit_date) over w audit_date$p
+  from tenant1."movies$a" a
+  window w as (partition by id order by audit_date desc)
+) b
+WHERE 1=1 AND audit_txid = 517093 AND audit_request = 'request_2'
+order by audit_date desc
+
 select undo(517093, 'request_2', null, null, null, array['movies$a', 'licenses$a']);
+-- query to find what to undo
+-- query to find what to undo
 
 create or replace function undo(
   audit_txid bigint, audit_request varchar, audit_action varchar, audit_user varchar, audit_interval interval, audit_tables varchar[]
@@ -310,7 +361,8 @@ create or replace function undo(
 language plpgsql AS $$
 declare
   tables record;
-  audits record;
+  from_data record;
+  to_data record;
 
   where_clause text;
   table_name text;
@@ -321,7 +373,11 @@ declare
   columns_list text;
   columns_type text;
   columns_insert text;
+
+  reserved_columns varchar[];
 begin
+  reserved_columns := array['audit_action', 'audit_date', 'audit_request', 'audit_txid', 'audit_user'];
+
   where_clause := 'WHERE 1=1';
   if (audit_txid is not null) then
     where_clause := where_clause || ' AND audit_txid = ' || audit_txid;
@@ -352,40 +408,52 @@ begin
   loop  
     table_name = current_schema || '.' || format('%I', tables.table_name);
 
+    -- find out which columns changed, and the prior values.
+    -- sort these in order they happened so we can undo them in
+    -- reverse
     from_sql := 
       format(
-'select a.*
-from %s a
+'-- query to find what to undo
+select %s, b.*
+from (
+  select a.*,
+         %s
+  from %s a
+  window w as (partition by id order by audit_date desc)
+) b
 %s
+order by audit_date desc
 ',
-       tables.table_name,
+       per_column('(case when ${column} <> ${column}$p then 1 else 0 end) as ${column}$c', current_schema::varchar, tables.table_name, reserved_columns),
+       per_column('lead(${column}) over w ${column}$p', current_schema::varchar, tables.table_name, reserved_columns),
+       table_name,
        where_clause
     );
 
-    for audits in execute from_sql
+    raise notice '%', from_sql;
+
+    --per_column('$1.${column}$c', current_schema, tables.table_name),
+    /*
+    to_sql := 
+'-- query to execute an undo
+update %s
+set 
+  %s
+where id = %s
+order by audit_date desc
+',
+   table_name,
+   per_column('${column} = ${column}$c', current_schema, tables.table_name)
+);
+
+    for from_data in execute from_sql
     loop 
-      raise notice '%', from_sql;
       execute from_sql;
 
-      to_sql := 
-        format(
-'select a.*
-from %s a
-where audit_date < ''%s''::timestamp
-order by audit_date desc
-limit 1',
-         tables.table_name,
-         audits.audit_date
-      );   
-
-      raise notice '%', to_sql;
-      execute to_sql;
-    end loop;
+    end loop;*/
   end loop;
 end;
 $$;
-
-
 
 -- Range test
 select
