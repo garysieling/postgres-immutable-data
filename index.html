@@ -63,23 +63,6 @@
 					</aside>
 				</section>
 
-      	<section data-transition="fade">
-					<h2>Overview</h2>
-					<p>
-					<ul>
-						<li>Functional programming movement encourages immutable data</li>
-						<li>Regulators require audit trails</li>
-						<li>End users are really bad at describing problems</li>
-					</p>
-
-					<aside class="notes">
-            * The recent renewal of interest of functional programming in the software development community has spurred interest in immutable data structures, especially in databases.
-            * Post postgres conference - I saw a lot of people were interested in auditing from a banking perspective
-            * I'm in pharma
-            * Inspiration - combining these gives you ways you can help other teams save a lot of time           
-					</aside>
-				</section>
-
 				<section data-transition="fade">
 					<h2>The Problem</h2>
 					<p>
@@ -118,14 +101,15 @@
 					</aside>
 				</section>
 
-				
+
+
       	<section data-transition="fade">
 					<h2>The Problem</h2>
 					<p>
 					<ul>
 						<li>"Why is this different than a week ago?" - Customer</li>
-						<li>Worse in regualated industries (pharma, banking)</li>
-						<li>Possible to answer, but time consuming</li>
+						<li>Worse in regulated industries (e.g. pharma)</li>
+						<li>Very time consuming</li>
 					</ul>
 					</p>
 
@@ -145,11 +129,29 @@
 					<aside class="notes">
 						* Time-travelling debugger
             *  Audit history typically provides a wealth of information, if you can sift through the noise. This talk discuss a variety of these issues: handling multiple overlapping time series, how to effectively filter data to points of interest, as well as performance and testing issues.
-						* Heap analytics shows every click, which is richer
 		</aside>
 				</section>
 
-				
+
+      	<section data-transition="fade">
+					<h2>Overview</h2>
+					<p>
+					<ul>
+						<li>Functional programming movement encourages immutable data</li>
+						<li>Regulators require audit trails</li>
+						<li>End users are really bad at describing problems</li>
+					</p>
+
+					<aside class="notes">
+            * The recent renewal of interest of functional programming in the software development community has spurred interest in immutable data structures, especially in databases.
+            * Post postgres conference - I saw a lot of people were interested in auditing from a banking perspective
+            * I'm in pharma
+            * Inspiration - combining these gives you ways you can help other teams save a lot of time           
+					</aside>
+				</section>
+
+
+			<!--
 				
       	<section data-transition="fade">
 					<h2>The Problem</h2>
@@ -161,7 +163,6 @@
 						* Time-travelling debugger
 					</aside>
 				</section>
-			
        	<section data-transition="fade">
 					<h2>The Problem</h2>
 					<p>
@@ -172,7 +173,7 @@
 						* Time-travelling debugger
 					</aside>
 				</section>
-
+-->
 
  
         <section data-transition="fade">
@@ -188,23 +189,24 @@
         <section data-transition="fade">
 					<h2>Design Considerations (1 of x)</h2>
 					<p>
-            <img src="wp-audit-log.png" />
-					</p>
-
-					<aside class="notes">
-					</aside>
-				</section>
-
-        
-        <section data-transition="fade">
-					<h2>Design Considerations (1 of x)</h2>
-					<p>
             <img src="git-extensions-commands.png" />
 					</p>
 
 					<aside class="notes">
 					</aside>
 				</section>
+
+
+        <section data-transition="fade">
+					<h2>Design Considerations (1 of x)</h2>
+					<p>
+            <img src="wp-audit-log.png" />
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+        
 
         <section data-transition="fade">
 					<h2>Design Considerations (1 of x)</h2>
@@ -253,25 +255,25 @@ $$;
 				</section>
 
 				<section data-transition="fade">
-					<h2>Procedures witin Procedures</h2>
+					<h2>SQL Templates</h2>
 					<p>
 					<pre><code data-trim>
-   table_name = current_schema || '.' || format('%I', tables.table_name);
+table_name = current_schema || '.' || format('%I', tables.table_name);
 
-    table_sql := 
-      format(
-       'create table %s$a
-        as select t.*, 
-             null::varchar(1) audit_action,
-             null::varchar audit_request,
-             null::bigint audit_txid,
-             null::varchar audit_user, 
-             null::timestamp audit_date
-           from %s t 
-           where 0 = 1',
-       table_name,
-       table_name
-    );
+table_sql := 
+  format(
+    'create table %s$a
+     as select t.*, 
+       null::varchar(1) audit_action,
+       null::varchar audit_request,
+       null::bigint audit_txid,
+       null::varchar audit_user, 
+       null::timestamp audit_date
+     from %s t 
+     where 0 = 1',
+     table_name,
+     table_name
+);
 					</code></pre>
 					</p>
 
@@ -351,7 +353,21 @@ where title$r = 1
 					<aside class="notes">
 					</aside>
 				</section>        
-								
+				<section data-transition="fade">
+					<h2>Demo - Rollback Tool</h2>	
+        	<p>
+             <ul>
+               <li>Infrequent data changes (fix output of software)</li>
+							 <li>Target change by user/request/time</li>
+							 <li>Undo changed columns</li>
+							 <li>Output SQL</li>
+							 <li>Report on the results</li>
+             </ul>
+					</p>					
+					<aside class="notes">
+
+					</aside>					 
+			  </section>
 				<section data-transition="fade">
 					<h2>Demo - Rollback Tool</h2>
           	<pre><code data-trim>
@@ -419,6 +435,7 @@ where
 					</aside>
 				</section>
 
+
         <section data-transition="fade">
 					<h2>Generating Ranges (2 of 3)</h2>
 					<pre><code data-trim>          
@@ -426,16 +443,13 @@ CREATE view movie_history AS
 SELECT
   tsrange(
     s.audit_date, 
-    coalesce(lead(s.audit_date) 
-             over(
-                  partition by s.i_id 
-                  order by s.audit_date), 
-            'infinity'), 
-            '[)'
-    ) m_effective,
+    coalesce(lead(s.audit_date) over w, 'infinity'), 
+    '[)'
+  ) m_effective,
   ...
 FROM movie$a s
 JOIN license$a l on s.license_id = s.id
+window w as (partition by id order by audit_date desc)
 					</code></pre>
 				 	<aside class="notes">
 						* Note open / closed ranges
@@ -477,16 +491,25 @@ WHERE movie_effective OVERLAPS license_effective
 				</section>
 
 	<section data-transition="fade">
-					<h2>Demo - Blame Tool with Timestamp</h2>
+					<h2>Point in time</h2>
 <pre><code data-trim>  
 SELECT movie_user, license_user, test
 FROM movies_vw
 WHERE id = ...
-AND date_range <@ '12345'
+AND movie_effective <@ NOW()
+AND license_effective <@ NOW()
 </code></pre>
 					<aside class="notes">
-						* TODO this requires multiple columns in the result set
-						* Next slide should be the stored procedure approach
+
+					</aside>
+				</section>
+				
+	<section data-transition="fade">
+					<h2>Query from Stored Procedure</h2>
+<pre><code data-trim>  
+.. TODO ..
+</code></pre>
+					<aside class="notes">
 
 					</aside>
 				</section>
@@ -503,21 +526,26 @@ AND date_range <@ '12345'
 					</aside>
 				</section>
 
-				<section data-transition="fade">
-					<h2>Performance Considerations</h2>
+      	<section data-transition="fade">
+					<h2>Indexing</h2>
 					<ul>
 						<li>Unindexed data</li>
 						<li>Indexing strategy - Datomic</li>
 						<li>Full text search - Splunk</li>
 					</ul>
 				 	<aside class="notes">
-						* Data is accessed rarely, and much larger than everything else
-						* Worth waiting for results, not maintaining indexes
-            * Run on a snapshot of the data
-            * Our data is relatively small, but audit data is a pain to copy locally
-            * You're usually most interested in recent audit data
-            * But Not that recently
-						* Story of waiting half an hour for query results late at night
+					</aside>
+				</section>
+
+				
+				<section data-transition="fade">
+					<h2>Unindexed Data</h2>
+					<ul>
+						<li>Single pass algorithms</li>
+						<li>Filter queries as soon as possible</li>
+						<li>Use 'except' to compare queries</li>
+					</ul>
+				 	<aside class="notes">
 					</aside>
 				</section>
 
@@ -525,50 +553,15 @@ AND date_range <@ '12345'
 					<h2>Testing Considerations</h2>
 					<ul>
 						<li>Use 'except' to compare queries</li>
+						<li>Database replicas</li>
 						<li>SQL tools hide whitespace</li>
-						<li>Comments on queries</li>
 					</ul>
 				 	<aside class="notes">
 						* Also the weird characters MS Word makes
 						* Also nulls vs other stuff
 					</aside>
 				</section>
-  		
-				<section data-transition="fade">
-					<h2>SQL Features (1 of ...)</h2>
-					<ul>
-						<li>Indexes as materialized views</li>
-					</ul>
-					<aside class="notes">
-						* http://en.wikipedia.org/wiki/Allen%27s_interval_algebra#Relations
-					</aside>
-				</section>
-
-				<section data-transition="fade">
-					<h2>SQL Features (1 of ...)</h2>
-					<ul>
-						<li>SELECT FROM function</li>
-					</ul>
-					<aside class="notes">
-						* Goal is to provide an API for support team
-						* 4-12 hours to answer a support ticket
-					</aside>
-				</section>
-	
-				<section data-transition="fade">
-					<h2>Other Considerations</h2>
-					<ul>
-						<li>Global vs local sequence number</li>
-						<li>Vector clocks</li>
-					</ul>
-				 	<aside class="notes">
-						* (1) shows order of creation of every object in the system
-						* (2) can be used to tie specific versions of records in two tables
-						* (3) can be used to resolve conflicts in partitioned systems (mobile?)
-						* database config lets you see history
-					</aside>					
-				</section>
-
+			
 				<section data-transition="fade">
 					<h1>THE END</h1>
 					<h3>Gary Sieling / @garysieling</h3>
