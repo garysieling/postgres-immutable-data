@@ -1,0 +1,47 @@
+Talk TODO:
+- Slide of timelines
+- Finish rollback function
+- Finish blame function?
+- Chart of history
+- Test blame / rollback / history on our data and take screenshot
+- Match up text of writing to talk slides
+- Check numbering
+- Check notes for relevance
+- Check for missing notes
+- Check for slides with too many notes
+- 2-3 dry runs
+- Check for overly complex/long slides
+- Check for code that is too small to read
+- Check for images that are too small to read
+- Test that code works
+- Check my contact information is all there
+- Read through abstract to make sure the points are covered / look for objections
+- much bigger text
+- spellcheck
+- wingspan logo?
+- data correction procedure - reports
+- Image of 'diff'
+- Write up a chart AOE style
+- Fix rollback
+- Fix 'blame'
+- Add procedure that does rollbacks
+- Add procedure that creates the time based views
+- Add nvd3.js?
+- Add sleep statement?
+- Add procedures to insert / update data
+- Add blame stored proc
+- need a slide of range comparison concepts
+- need an example of a timeline of temporal joins
+- tabbing audit
+- no mention of tagging later on
+- audit function on slide 11 is wrong??
+- swap code samples on slide 13
+- slide 14 - should be lag??
+- slide 14/15 - some code should move to make it easier to splain
+- delete slide 22??
+- overlaps - should be another view
+- do a perf test on our views
+- conclusion sucks
+- add speaker notes
+- the 'testing' query doesn't follow
+- split out OSS library
