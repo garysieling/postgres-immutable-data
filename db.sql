@@ -304,9 +304,8 @@ drop function per_column(
 ) 
 
 
-
 create or replace function per_column(
-  snippet varchar, search_schema varchar, search_table varchar, skip varchar[]
+  snippet varchar, delimeter varchar, search_schema varchar, search_table varchar, skip varchar[]
 ) returns varchar
 language plpgsql AS $$
 declare
@@ -324,18 +323,19 @@ begin
     order by ordinal_position
   loop     
     result := result || 
-      replace(snippet, '${column}', cols.column_name) || ', ';          
+      replace(snippet, '${column}', cols.column_name) || delimeter;          
   end loop;
 
   result := 
     substring(
       result 
       from 0 
-      for length(result) - 1);
+      for length(result) - length(delimeter) + 1);
   
   return result;
 end;
 $$;
+
 
 select per_column('${column}$c'::varchar, current_schema::varchar, 'movies'::varchar, array['title'::varchar]) 
 
@@ -421,16 +421,90 @@ from (
   from %s a
   window w as (partition by id order by audit_date desc)
 ) b
+create or replace function undo(
+  audit_txid bigint, audit_request varchar, audit_action varchar, audit_user varchar, audit_interval interval, audit_tables varchar[]
+) returns void
+language plpgsql AS $$
+declare
+  tables record;
+  from_data record;
+  to_data record;
+
+  where_clause text;
+  table_name text;
+  from_sql text;
+  to_sql text;
+  undo_sql text;
+
+  columns_list text;
+  columns_type text;
+  columns_insert text;
+
+  reserved_columns varchar[];
+begin
+  reserved_columns := array['audit_action', 'audit_date', 'audit_request', 'audit_txid', 'audit_user'];
+
+  where_clause := 'WHERE 1=1';
+  if (audit_txid is not null) then
+    where_clause := where_clause || ' AND audit_txid = ' || audit_txid;
+  end if;
+
+  if (audit_request is not null) then
+    where_clause := where_clause || ' AND audit_request = ''' || format('%I', audit_request) || '''';
+  end if;
+
+  if (audit_action is not null) then
+    where_clause := where_clause || ' AND audit_action = ''' || format('%I', audit_action) || '''';
+  end if;
+
+  if (audit_user is not null) then
+    where_clause := where_clause || ' AND audit_user = ''' || format('%I', audit_user) || '''';
+  end if;
+
+  if (audit_interval is not null) then
+    where_clause := where_clause || ' AND audit_interval <% interval ''' || format('%I', audit_interval) || '''';
+  end if;
+
+  for tables in 
+    select * 
+    from information_schema.tables t
+    where t.table_name like '%$a' 
+      and t.table_schema = current_schema
+      and (audit_tables is null or t.table_name = any (audit_tables))
+  loop  
+    table_name = current_schema || '.' || format('%I', tables.table_name);
+
+    -- find out which columns changed, and the prior values.
+    -- sort these in order they happened so we can undo them in
+    -- reverse
+    from_sql := 
+      format(
+'-- query to updates
+with prior as (
+  select * 
+  from %s
+  %s
+)
+update %s
+set %s
 %s
-order by audit_date desc
 ',
-       per_column('(case when ${column} <> ${column}$p then 1 else 0 end) as ${column}$c', current_schema::varchar, tables.table_name, reserved_columns),
-       per_column('lead(${column}) over w ${column}$p', current_schema::varchar, tables.table_name, reserved_columns),
-       table_name,
-       where_clause
+      table_name,
+      where_clause,
+      table_name,
+      per_column('${column} = (case when ${column} <> prior.${column} then prior.${column} else prior.${column} end)', ', ', current_schema::varchar, tables.table_name, reserved_columns),
+      --per_column('lead(${column}) over w ${column}$p', ', ', current_schema::varchar, tables.table_name, reserved_columns),
+      where_clause
     );
 
     raise notice '%', from_sql;
+    -- problem here is you can't enumerate record columns
+    -- and you also can't do this:
+    /*
+UPDATE accounts SET (contact_last_name, contact_first_name) =
+    (SELECT last_name, first_name FROM salesmen
+     WHERE salesmen.id = accounts.sales_id);
+*/
 
     --per_column('$1.${column}$c', current_schema, tables.table_name),
     /*
@@ -445,12 +519,12 @@ order by audit_date desc
    table_name,
    per_column('${column} = ${column}$c', current_schema, tables.table_name)
 );
-
+*/
     for from_data in execute from_sql
     loop 
-      execute from_sql;
+      --execute from_sql;
 
-    end loop;*/
+    end loop;
   end loop;
 end;
 $$;
