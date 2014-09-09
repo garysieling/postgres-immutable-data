@@ -28,6 +28,7 @@ Talk TODO:
 - Add blame stored proc
 - need an example of a timeline of temporal joins
 - tabbing audit
+- change procedure example to use dates correctly
 - no mention of tagging later on
 - audit function on slide 11 is wrong??
 - swap code samples on slide 13

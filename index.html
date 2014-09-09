@@ -54,7 +54,7 @@
 					<h1>Immutable Data</h1>
 					<h3>in Postgres</h3>
 					<p>
-						<small>Created by <a href="http://www.garysieling.com/blog">Gary Sieling</a> / <a href="http://twitter.com/garysieling">@garysieling</a></small>
+						<small><a href="http://www.garysieling.com/blog">Gary Sieling</a> / <a href="http://twitter.com/garysieling">@garysieling</a></small>
 					</p>
           
 					<aside class="notes">
@@ -232,7 +232,7 @@ create function audit() returns trigger
 language plpgsql AS $$
 begin
   execute
-    'INSERT INTO movies$a (text, audit_date) VALUES ($1.text, $2);'
+    'insert into movies$a (text, audit_date) values ($1.text, $2);'
 end;
 $$;
 					</code></pre>
@@ -489,17 +489,19 @@ where
         <section data-transition="fade">
 					<h2>Time Travelling Debugger (2 of 6)</h2>
 					<pre><code data-trim class="sql">          
-CREATE view movie_history AS 
-SELECT
-  tsrange(
-    s.audit_date, 
-    coalesce(lead(s.audit_date) over w, 'infinity'), 
-    '[)'
-  ) m_effective,
-  ...
-FROM movie$a s
-JOIN license$a l on s.license_id = s.id
-window w as (partition by id order by audit_date desc)
+with effective_dates as (
+  select
+    tsrange(
+      s.audit_date, 
+      coalesce(lead(s.audit_date) over w, 'infinity'), 
+      '[)'
+    ) m_effective,
+    ...
+  from movie$a s
+  join license$a l on s.license_id = s.id
+  window w as (partition by id order by audit_date desc)
+)
+select ...
 					</code></pre>
 				 	<aside class="notes">
 						* Note open / closed ranges
@@ -512,13 +514,17 @@ window w as (partition by id order by audit_date desc)
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (3 of 6)</h2>
 <pre><code data-trim class="sql">                      
-CREATE VIEW movie_ranges
-SELECT
-  coalesce(
-    license_effective, 
-    tsrange('-infinity', 'infinity', '[]')) license_effective,
-  ...
-FROM movie_history 
+with 
+  effective_dates as (...)
+  effective_ranges as (   
+    select
+      coalesce(
+        license_effective, 
+        tsrange('-infinity', 'infinity', '[]')) license_effective,
+      ...
+    from effective_dates
+)
+select ...
 					</code></pre>
 					<aside class="notes">
 						* TODO: create license
@@ -530,9 +536,13 @@ FROM movie_history
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (4 of 6)</h2>
 <pre><code data-trim class="sql">                      
-SELECT *
-FROM movie_ranges
-WHERE movie_effective OVERLAPS license_effective
+create view movie_history_vw as
+with 
+  effective_dates as (...)
+  effective_ranges as (...)
+select *
+from effective_ranges
+where movie_effective overlaps license_effective
 					</code></pre>
 					<aside class="notes">
             * We're on 9.1 - don't have ranges
@@ -543,11 +553,11 @@ WHERE movie_effective OVERLAPS license_effective
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (5 of 6)</h2>
 <pre><code data-trim class="sql">  
-SELECT movie_user, license_user, test
-FROM movies_vw
-WHERE id = ...
-AND movie_effective <@ NOW()
-AND license_effective <@ NOW()
+select movie_user, license_user, test
+from movie_history_vw
+where id = ...
+and movie_effective <@ now()
+and license_effective <@ now()
 </code></pre>
 					<aside class="notes">
 
@@ -570,9 +580,9 @@ begin
 end
 $$ language 'plpgsql';
 
-create view test_vw as
+create view movie_vw as
 select * 
-from get_rows('movies') 
+from get_rows('movie_history_vw') 
 as t(id integer, title text);
 </code></pre>
 					<aside class="notes">
@@ -643,6 +653,7 @@ as t(id integer, title text);
 				<section data-transition="fade">
 					<h1>THE END</h1>
 					<h3>Gary Sieling / @garysieling</h3>
+					<h4>www.wingspan.com</h4>
 					<h4>www.garysieling.com</h4>
 				</section>
 
