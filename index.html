@@ -557,7 +557,23 @@ AND license_effective <@ NOW()
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (6 of 6)</h2>
 <pre><code data-trim class="sql">  
-.. TODO ..
+create or replace function get_rows(text) 
+returns setof record as 
+$$
+declare
+  r record;
+begin
+  for r in execute 'select * from ' || $1 loop
+    return next r;
+  end loop;
+  return;
+end
+$$ language 'plpgsql';
+
+create view test_vw as
+select * 
+from get_rows('movies') 
+as t(id integer, title text);
 </code></pre>
 					<aside class="notes">
 
