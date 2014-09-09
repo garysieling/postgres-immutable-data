@@ -354,7 +354,7 @@ where title$r = 1
 					</aside>
 				</section>        
 				<section data-transition="fade">
-					<h2>Demo - Rollback Tool</h2>	
+					<h2>Undo</h2>	
         	<p>
              <ul>
                <li>Infrequent data changes (fix output of software)</li>
@@ -368,26 +368,71 @@ where title$r = 1
 
 					</aside>					 
 			  </section>
+
 				<section data-transition="fade">
-					<h2>Demo - Rollback Tool</h2>
+					<h2>Undo</h2>
           	<pre><code data-trim>
-from_sql := 
-  format(
-'-- query to find what to undo
-select %s, b.*
-from (
-  select a.*,
-         %s
-  from %s a
+-- undo query
+with prior as (
+  select rank() over w,
+         audit_data.*         
+  from tenant1.movies$a audit_data
+  where audit_data.audit_txid = 517093 
   window w as (partition by id order by audit_date desc)
-) b
-%s
-order by audit_date desc',
-  per_column('%% <> ${col}$p as ${col}$c', table, reserved_columns),
-  per_column('lead(${col}) over w ${col}$p', table, reserved_columns),
-  table,
-  where_clause
-);
+  order by 1 
+  offset 1 
+  limit 1
+)
+update ...
+</code></pre>
+					<aside class="notes">
+           
+					</aside>
+				</section>
+				
+
+				<section data-transition="fade">
+					<h2>Undo</h2>
+          	<pre><code data-trim>
+-- undo query
+with prior as (
+  ...
+)
+update movies$a audit_data
+set 
+  title = 
+    (case when 
+      (audit_data.title <> prior.title) or
+      (audit_data.title is null and prior.title is not null) or 
+      (audit_data.title is not null and audit_data.title is null)
+    then prior.title 
+    else audit_data.title 
+    end),
+  ...
+from prior
+where audit_data.audit_txid = 517093
+</code></pre>
+					<aside class="notes">
+           
+					</aside>
+				</section>
+				
+
+
+				<section data-transition="fade">
+					<h2>Undo</h2>
+          	<pre><code data-trim>
+ format('--insert sql here--',
+      per_column('
+  ${column} = 
+    (case when 
+      (audit_data.${column} <> prior.${column}) or
+      (audit_data.${column} is null and prior.${column} is not null) or 
+      (audit_data.${column} is not null and audit_data.${column} is null)
+    then prior.${column} 
+    else audit_data.${column} 
+    end)', ', ', 
+    current_schema::varchar, tables.table_name, reserved_columns))
 </code></pre>
 					<aside class="notes">
             * Things to note: comment at the beginning
