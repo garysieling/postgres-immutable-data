@@ -134,10 +134,10 @@
 
 
       	<section data-transition="fade">
-					<h2>Overview</h2>
+					<h2>Overview (1 of 2)</h2>
 					<p>
 					<ul>
-						<li>Functional programming movement encourages immutable data</li>
+						<li>Functional programming encourages immutable data</li>
 						<li>Regulators require audit trails</li>
 						<li>End users are really bad at describing problems</li>
 					</p>
@@ -151,33 +151,26 @@
 				</section>
 
 
-			<!--
-				
+
       	<section data-transition="fade">
-					<h2>The Problem</h2>
+					<h2>Overview (2 of 2)</h2>
 					<p>
-						<img src="netflix10.png" />
+					<ul>
+						<li>Database Design Considerations</li>
+						<li>Example Functionality</li>
+						<li>Lessons Learned</li>
 					</p>
 
 					<aside class="notes">
-						* Time-travelling debugger
+            * The recent renewal of interest of functional programming in the software development community has spurred interest in immutable data structures, especially in databases.
+            * Post postgres conference - I saw a lot of people were interested in auditing from a banking perspective
+            * I'm in pharma
+            * Inspiration - combining these gives you ways you can help other teams save a lot of time           
 					</aside>
 				</section>
-       	<section data-transition="fade">
-					<h2>The Problem</h2>
-					<p>
-						<img src="netflix12.png" />
-					</p>
 
-					<aside class="notes">
-						* Time-travelling debugger
-					</aside>
-				</section>
--->
-
- 
         <section data-transition="fade">
-					<h2>Design Considerations (1 of x)</h2>
+					<h2>Design Considerations (1 of 4)</h2>
 					<p>
             <img src="git-extensions-history.png" />
 					</p>
@@ -187,7 +180,7 @@
         </section>
 
         <section data-transition="fade">
-					<h2>Design Considerations (1 of x)</h2>
+					<h2>Design Considerations (2 of 4)</h2>
 					<p>
             <img src="git-extensions-commands.png" />
 					</p>
@@ -198,7 +191,7 @@
 
 
         <section data-transition="fade">
-					<h2>Design Considerations (1 of x)</h2>
+					<h2>Design Considerations (3 of 4)</h2>
 					<p>
             <img src="wp-audit-log.png" />
 					</p>
@@ -209,7 +202,7 @@
         
 
         <section data-transition="fade">
-					<h2>Design Considerations (1 of x)</h2>
+					<h2>Design Considerations (4 of 4)</h2>
 					<p>
              <ul>
                <li>Request context (user/guid)</li>
@@ -284,7 +277,7 @@ table_sql :=
 				</section>
 
         <section data-transition="fade">
-					<h2>Data Model</h2>
+					<h2>Data Sources</h2>
 					<p>
           <pre><code data-trim>
 SELECT txid_current(); 
@@ -307,8 +300,22 @@ INTO v_context;
 					</aside>
 				</section>
 			
+       	<section data-transition="fade">
+					<h2>Example Functionality</h2>	
+        	<p>
+             <ul>
+               <li>Blame</li>
+							 <li>Undo</li>
+							 <li>Time-travelling debugger</li>
+             </ul>
+					</p>					
+					<aside class="notes">
+
+					</aside>					 
+			  </section>
+
 	<section data-transition="fade">
-					<h2>Demo - Blame Tool (x of x)</h2>
+					<h2>Demo - Blame Tool (1 of 3)</h2>
           <pre><code data-trim>
 select a.*
       (title <> lead(title) over w) title$c,
@@ -321,7 +328,7 @@ window w as (partition by id order by audit_date desc)
 				</section>
 
         <section data-transition="fade">
-					<h2>Demo - Blame Tool (x of x)</h2>
+					<h2>Demo - Blame Tool (2 of 3)</h2>
           <pre><code data-trim>
 with history as (...)
 
@@ -341,7 +348,7 @@ window y as (
 				</section>
 
      <section data-transition="fade">
-					<h2>Demo - Blame Tool (x of x)</h2>
+					<h2>Demo - Blame Tool (3 of 3)</h2>
           <pre><code data-trim>
 with history as (...),
      ordered_history as (...)
@@ -352,9 +359,10 @@ where title$r = 1
 </code></pre>
 					<aside class="notes">
 					</aside>
-				</section>        
+				</section>
+
 				<section data-transition="fade">
-					<h2>Undo</h2>	
+					<h2>Undo (1 of 4)</h2>	
         	<p>
              <ul>
                <li>Infrequent data changes (fix output of software)</li>
@@ -370,7 +378,7 @@ where title$r = 1
 			  </section>
 
 				<section data-transition="fade">
-					<h2>Undo</h2>
+					<h2>Undo (2 of 4)</h2>
           	<pre><code data-trim>
 -- undo query
 with prior as (
@@ -386,18 +394,16 @@ with prior as (
 update ...
 </code></pre>
 					<aside class="notes">
-           
+           4
 					</aside>
 				</section>
 				
 
 				<section data-transition="fade">
-					<h2>Undo</h2>
+					<h2>Undo (3 of 4)</h2>
           	<pre><code data-trim>
 -- undo query
-with prior as (
-  ...
-)
+with prior as (...)
 update movies$a audit_data
 set 
   title = 
@@ -420,7 +426,7 @@ where audit_data.audit_txid = 517093
 
 
 				<section data-transition="fade">
-					<h2>Undo</h2>
+					<h2>Undo (4 of 4)</h2>
           	<pre><code data-trim>
  format('--insert sql here--',
       per_column('
@@ -460,7 +466,7 @@ where audit_data.audit_txid = 517093
 				</section>
 
 				<section data-transition="fade">
-					<h2>Generating Ranges (1 of 3)</h2>
+					<h2>Time Travelling Debugger (1 of 6)</h2>
 					<p>
 					<pre><code data-trim>
 select
@@ -482,7 +488,7 @@ where
 
 
         <section data-transition="fade">
-					<h2>Generating Ranges (2 of 3)</h2>
+					<h2>Time Travelling Debugger (2 of 6)</h2>
 					<pre><code data-trim>          
 CREATE view movie_history AS 
 SELECT
@@ -505,7 +511,7 @@ window w as (partition by id order by audit_date desc)
         </section>
 
 				<section data-transition="fade">
-					<h2>Generating Ranges (3 of 3)</h2>
+					<h2>Time Travelling Debugger (3 of 6)</h2>
 <pre><code data-trim>                      
 CREATE VIEW movie_ranges
 SELECT
@@ -523,7 +529,7 @@ FROM movie_history
 				</section>
 
 				<section data-transition="fade">
-					<h2>Generating Ranges (3 of 3)</h2>
+					<h2>Time Travelling Debugger (4 of 6)</h2>
 <pre><code data-trim>                      
 SELECT *
 FROM movie_ranges
@@ -536,7 +542,7 @@ WHERE movie_effective OVERLAPS license_effective
 				</section>
 
 	<section data-transition="fade">
-					<h2>Point in time</h2>
+					<h2>Time Travelling Debugger (5 of 6)</h2>
 <pre><code data-trim>  
 SELECT movie_user, license_user, test
 FROM movies_vw
@@ -550,7 +556,7 @@ AND license_effective <@ NOW()
 				</section>
 				
 	<section data-transition="fade">
-					<h2>Query from Stored Procedure</h2>
+					<h2>Time Travelling Debugger (6 of 6)</h2>
 <pre><code data-trim>  
 .. TODO ..
 </code></pre>
@@ -570,6 +576,18 @@ AND license_effective <@ NOW()
 						* http://en.wikipedia.org/wiki/Allen%27s_interval_algebra#Relations
 					</aside>
 				</section>
+
+      	<section data-transition="fade">
+					<h2>Lessons Learned</h2>
+					<ul>
+						<li>Indexing Audit History</li>
+						<li>Working with unindexed data</li>
+						<li>Testing SQL</li>
+					</ul>
+				 	<aside class="notes">
+					</aside>
+				</section>
+
 
       	<section data-transition="fade">
 					<h2>Indexing</h2>
