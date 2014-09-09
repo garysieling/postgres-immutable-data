@@ -219,7 +219,7 @@
 				<section data-transition="fade">
 					<h2>Data Model</h2>
 					<p>
-					<pre><code data-trim>
+					<pre><code data-trim class="sql">
 create table movies (title text);
 
 create table movies$a (title text, audit_date timestamp(3));
@@ -228,12 +228,12 @@ create trigger movies$t
   after insert on movies 
   for each row execute procedure audit();
 
-CREATE FUNCTION audit() RETURNS trigger
-LANGUAGE plpgsql AS $$
-BEGIN
-  EXECUTE
+create function audit() returns trigger
+language plpgsql AS $$
+begin
+  execute
     'INSERT INTO movies$a (text, audit_date) VALUES ($1.text, $2);'
-END;
+end;
 $$;
 					</code></pre>
 					</p>
@@ -250,7 +250,7 @@ $$;
 				<section data-transition="fade">
 					<h2>SQL Templates</h2>
 					<p>
-					<pre><code data-trim>
+					<pre><code data-trim class="sql">
 table_name = current_schema || '.' || format('%I', tables.table_name);
 
 table_sql := 
@@ -279,17 +279,17 @@ table_sql :=
         <section data-transition="fade">
 					<h2>Data Sources</h2>
 					<p>
-          <pre><code data-trim>
-SELECT txid_current(); 
+          <pre><code data-trim class="sql">
+select txid_current(); 
 					</code></pre>
 
-          <pre><code data-trim>
-SELECT 
+          <pre><code data-trim class="sql">
+select 
   split_part(application_name, ',', 1) user,
   split_part(application_name, ',', 2) request
-FROM pg_stat_activity 
-WHERE procpid = pg_backend_pid() 
-INTO v_context;
+from pg_stat_activity 
+where procpid = pg_backend_pid() 
+into v_context;
 					</code></pre>
 
 					</p>
@@ -316,7 +316,7 @@ INTO v_context;
 
 	<section data-transition="fade">
 					<h2>Demo - Blame Tool (1 of 3)</h2>
-          <pre><code data-trim>
+          <pre><code data-trim class="sql">
 select a.*
       (title <> lead(title) over w) title$c,
 from movies$a a
@@ -329,7 +329,7 @@ window w as (partition by id order by audit_date desc)
 
         <section data-transition="fade">
 					<h2>Demo - Blame Tool (2 of 3)</h2>
-          <pre><code data-trim>
+          <pre><code data-trim class="sql">
 with history as (...)
 
 select history.*,
@@ -349,10 +349,9 @@ window y as (
 
      <section data-transition="fade">
 					<h2>Demo - Blame Tool (3 of 3)</h2>
-          <pre><code data-trim>
+          <pre><code data-trim class="sql">
 with history as (...),
      ordered_history as (...)
-
 select * 
 from ordered_history 
 where title$r = 1
@@ -379,7 +378,7 @@ where title$r = 1
 
 				<section data-transition="fade">
 					<h2>Undo (2 of 4)</h2>
-          	<pre><code data-trim>
+          	<pre><code data-trim class="sql">
 -- undo query
 with prior as (
   select rank() over w,
@@ -401,7 +400,7 @@ update ...
 
 				<section data-transition="fade">
 					<h2>Undo (3 of 4)</h2>
-          	<pre><code data-trim>
+          	<pre><code data-trim class="sql">
 -- undo query
 with prior as (...)
 update movies$a audit_data
@@ -427,7 +426,7 @@ where audit_data.audit_txid = 517093
 
 				<section data-transition="fade">
 					<h2>Undo (4 of 4)</h2>
-          	<pre><code data-trim>
+          	<pre><code data-trim class="sql">
  format('--insert sql here--',
       per_column('
   ${column} = 
@@ -489,7 +488,7 @@ where
 
         <section data-transition="fade">
 					<h2>Time Travelling Debugger (2 of 6)</h2>
-					<pre><code data-trim>          
+					<pre><code data-trim class="sql">          
 CREATE view movie_history AS 
 SELECT
   tsrange(
@@ -512,7 +511,7 @@ window w as (partition by id order by audit_date desc)
 
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (3 of 6)</h2>
-<pre><code data-trim>                      
+<pre><code data-trim class="sql">                      
 CREATE VIEW movie_ranges
 SELECT
   coalesce(
@@ -530,7 +529,7 @@ FROM movie_history
 
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (4 of 6)</h2>
-<pre><code data-trim>                      
+<pre><code data-trim class="sql">                      
 SELECT *
 FROM movie_ranges
 WHERE movie_effective OVERLAPS license_effective
@@ -543,7 +542,7 @@ WHERE movie_effective OVERLAPS license_effective
 
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (5 of 6)</h2>
-<pre><code data-trim>  
+<pre><code data-trim class="sql">  
 SELECT movie_user, license_user, test
 FROM movies_vw
 WHERE id = ...
@@ -557,7 +556,7 @@ AND license_effective <@ NOW()
 				
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (6 of 6)</h2>
-<pre><code data-trim>  
+<pre><code data-trim class="sql">  
 .. TODO ..
 </code></pre>
 					<aside class="notes">

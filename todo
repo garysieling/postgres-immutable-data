@@ -1,10 +1,8 @@
 Talk TODO:
 - Slide of timelines
-- Finish rollback function
 - Finish blame function?
 - Chart of history
 - Test blame / rollback / history on our data and take screenshot
-- Check numbering
 - Check notes for relevance
 - Check for missing notes
 - Check for slides with too many notes
@@ -16,21 +14,18 @@ Talk TODO:
 - Check my contact information is all there
 - Read through abstract to make sure the points are covered / look for objections
 - much bigger text
-- audit for casing
 - spellcheck
 - wingspan logo?
+- construct a test case with multiple changes/tables in one transaction
 - data correction procedure - reports
 - Image of 'diff'
 - Write up a chart AOE style
-- Fix rollback
 - Fix 'blame'
-- Add procedure that does rollbacks
 - Add procedure that creates the time based views
 - Add nvd3.js?
 - Add sleep statement?
 - Add procedures to insert / update data
 - Add blame stored proc
-- need a slide of range comparison concepts
 - need an example of a timeline of temporal joins
 - tabbing audit
 - no mention of tagging later on
