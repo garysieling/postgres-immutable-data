@@ -619,7 +619,8 @@ with
 select
   coalesce(
     license_effective, 
-    tstzrange('-infinity', 'infinity', '[]')) license_effective_range,
+    tstzrange('-infinity', 'infinity', '[]')) 
+  as license_effective_range,
   effective_dates.*
 from effective_dates
 					</code></pre>
