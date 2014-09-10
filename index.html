@@ -289,15 +289,15 @@ create table licenses (
 create table movies$a (
   id int, 
   title text, 
-  audit_date timestamp(3));
+  audit_date timestamp with time zone);
 
 create table licenses$a (
-  id int primary key,
+  id int,
   movie_id int references movies (id),
   title text, 
   start_date timestamp, 
   end_date timestamp,
-  audit_date timestamp(3)
+  audit_date timestamp with time zone
 );
 					</code></pre>
 					</p>
@@ -316,7 +316,7 @@ create table licenses$a (
 					<h2>Data Model (3 of 3)</h2>
 					<p>
 					<pre><code data-trim class="sql">
-create or replace function audit_movie() returns trigger
+create or replace function audit_movie_insert() returns trigger
 language plpgsql AS $$
 begin
   execute
@@ -329,8 +329,8 @@ end;
 $$;
 
 create trigger movies$t
-  after insert on movies 
-  for each row execute procedure audit_movie();
+  after insert or update on movies 
+  for each row execute procedure audit_movie_insert();
 					</code></pre>
 					</p>
 
@@ -359,10 +359,10 @@ table_sql :=
   format(
     'create table %s$a
      as select t.*, 
-       null::varchar(1) audit_action,
-       null::varchar audit_request,
+       null::text(1) audit_action,
+       null::text audit_request,
        null::bigint audit_txid,
-       null::varchar audit_user, 
+       null::text audit_user, 
        null::timestamp audit_date
      from %s t 
      where 0 = 1',
@@ -420,7 +420,7 @@ into v_context;
 					<h2>Demo - Blame Tool (1 of 3)</h2>
           <pre><code data-trim class="sql">
 select a.*
-      (title <> lead(title) over w) title$c,
+      (title <> lag(title) over w) title$c,
 from movies$a a
 where audit_action in ('I', 'U')
 window w as (partition by id order by audit_date desc)
@@ -435,7 +435,7 @@ window w as (partition by id order by audit_date desc)
 with history as (...)
 
 select history.*,
-  (case when (title <> lead(title) over y) 
+  (case when (title <> lag(title) over y) 
    then audit_user else null end) title$u, 
   dense_rank() over y title$r
 
@@ -575,7 +575,7 @@ select
 from
   movies_vw
 where 
-  license_effective @> now()
+  effective <@ now()
 					</code></pre>
 
 					</p>
@@ -591,19 +591,17 @@ where
         <section data-transition="fade">
 					<h2>Time Travelling Debugger (2 of 6)</h2>
 					<pre><code data-trim class="sql">          
-with effective_dates as (
-  select
-    tsrange(
-      s.audit_date, 
-      coalesce(lead(s.audit_date) over w, 'infinity'), 
-      '[)'
-    ) m_effective,
-    ...
-  from movie$a s
-  join license$a l on s.license_id = s.id
-  window w as (partition by id order by audit_date desc)
-)
-select ...
+select
+  tstzrange(
+    coalesce(m.audit_date, '-infinity'), 
+    coalesce(lead(m.audit_date) over w_m, 'infinity'),
+    '[)'
+  ) movie_effective,
+  ...
+from movies$a m
+full outer join licenses$a l on l.movie_id = m.id
+window w_m as (partition by m.id order by m.audit_date asc)
+       w_l as (partition by l.id order by l.audit_date asc)
 					</code></pre>
 				 	<aside class="notes">
 						* Note open / closed ranges
@@ -617,16 +615,13 @@ select ...
 					<h2>Time Travelling Debugger (3 of 6)</h2>
 <pre><code data-trim class="sql">                      
 with 
-  effective_dates as (...)
-  effective_ranges as (   
-    select
-      coalesce(
-        license_effective, 
-        tsrange('-infinity', 'infinity', '[]')) license_effective,
-      ...
-    from effective_dates
-)
-select ...
+  effective_dates as (...),
+select
+  coalesce(
+    license_effective, 
+    tstzrange('-infinity', 'infinity', '[]')) license_effective_range,
+  effective_dates.*
+from effective_dates
 					</code></pre>
 					<aside class="notes">
 						* TODO: create license
@@ -638,13 +633,12 @@ select ...
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (4 of 6)</h2>
 <pre><code data-trim class="sql">                      
-create view movie_history_vw as
 with 
-  effective_dates as (...)
+  effective_dates as (...),
   effective_ranges as (...)
 select *
 from effective_ranges
-where movie_effective overlaps license_effective
+where movie_effective && license_effective_range
 					</code></pre>
 					<aside class="notes">
             * We're on 9.1 - don't have ranges
@@ -655,11 +649,15 @@ where movie_effective overlaps license_effective
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (5 of 6)</h2>
 <pre><code data-trim class="sql">  
-select movie_user, license_user, test
-from movie_history_vw
-where id = ...
-and movie_effective <@ now()
-and license_effective <@ now()
+create view movie_history_vw as
+with 
+  effective_dates as (...),
+  effective_ranges as (...),
+  overlapping_ranges as (...)
+select *
+from effective_ranges
+where movie_effective @> now()
+and license_effective @> now()
 </code></pre>
 					<aside class="notes">
 
@@ -669,23 +667,23 @@ and license_effective <@ now()
 	<section data-transition="fade">
 					<h2>Time Travelling Debugger (6 of 6)</h2>
 <pre><code data-trim class="sql">  
-create or replace function get_rows(text) 
-returns setof record as 
+
+create or replace function get_rows(timestamp with time zone) 
+returns setof movie_history_vw as 
 $$
 declare
   r record;
+  query text;
 begin
-  for r in execute 'select * from ' || $1 loop
-    return next r;
-  end loop;
-  return;
+  return query
+    select * 
+    from movie_history_vw 
+    where license_effective @> $1 
+    and movie_effective @> $1;
 end
 $$ language 'plpgsql';
 
-create view movie_vw as
-select * 
-from get_rows('movie_history_vw') 
-as t(id integer, title text);
+select * from get_rows(now());
 </code></pre>
 					<aside class="notes">
 

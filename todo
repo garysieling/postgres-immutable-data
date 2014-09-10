@@ -2,6 +2,7 @@ Talk TODO:
 - Slide of timelines
 - Finish blame function?
 - Chart of history
+- Demo of reports?
 - Test blame / rollback / history on our data and take screenshot
 - Check notes for relevance
 - Check for missing notes
@@ -26,17 +27,10 @@ Talk TODO:
 - Add procedures to insert / update data
 - Add blame stored proc
 - need an example of a timeline of temporal joins
-- change procedure example to use dates correctly
 - no mention of tagging later on
-- swap code samples on slide 13
-- slide 14 - should be lag??
-- slide 14/15 - some code should move to make it easier to splain
-- delete slide 22??
-- overlaps - should be another view
 - do a perf test on our views
 - conclusion sucks
 - add speaker notes
 - the 'testing' query doesn't follow
 - split out OSS library
 - unify text types
-

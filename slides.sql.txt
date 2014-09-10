@@ -1,0 +1,150 @@
+drop schema tenant2 cascade;
+create schema tenant2;
+set search_path to tenant2;
+
+create table movies (
+  id int primary key, 
+  title text);
+
+create table licenses (
+  id int primary key,
+  movie_id int references movies (id),
+  title text, 
+  start_date timestamp, 
+  end_date timestamp
+);
+
+
+create table movies$a (
+  id int, 
+  title text, 
+  audit_date timestamp with time zone);
+
+create table licenses$a (
+  id int,
+  movie_id int references movies (id),
+  title text, 
+  start_date timestamp, 
+  end_date timestamp,
+  audit_date timestamp with time zone
+);
+
+create or replace function audit_movies_insert() returns trigger
+language plpgsql AS $$
+begin
+  execute
+    'insert into movies$a (id, title, audit_date)
+     values ($1.id, $1.title, $2);'
+  using new, now();
+
+  return null;
+end;
+$$;
+
+create trigger movies$t
+  after insert or update on movies 
+  for each row execute procedure audit_movies_insert();
+
+create or replace function audit_licenses_insert() returns trigger
+language plpgsql AS $$
+begin
+  execute
+    'insert into licenses$a (id, title, audit_date)
+     values ($1.id, $1.title, $2);'
+  using new, now();
+
+  return null;
+end;
+$$;
+
+create trigger licenses$t
+  after insert or update on licenses 
+  for each row execute procedure audit_licenses_insert();
+
+
+select * from movies$a;
+
+create or replace view movie_history_vw as
+with 
+  effective_dates as (
+  select
+    tstzrange(
+      coalesce(m.audit_date, '-infinity'), 
+      coalesce(lead(m.audit_date) over w_m, 'infinity'),
+       '[)'
+    ) movie_effective,
+    tstzrange(
+      coalesce(l.audit_date, '-infinity'), 
+      coalesce(lead(l.audit_date) over w_l, 'infinity'), 
+      '[)'
+    ) license_effective,
+    m.id movie_id,
+    m.title movie_title,
+    l.id license_id,
+    l.title license_title,
+    l.start_date,
+    l.end_date
+    from movies$a m
+    full outer join licenses$a l on l.movie_id = m.id
+    window w_m as (partition by m.id order by m.audit_date asc),
+           w_l as (partition by l.id order by l.audit_date asc)
+  ),
+  effective_ranges as (
+    select
+      coalesce(
+        license_effective, 
+        tstzrange('-infinity', 'infinity', '[]')) license_effective_range,
+      effective_dates.*
+    from effective_dates
+  ),
+  overlapping_ranges as (
+     select *
+     from effective_ranges
+     where movie_effective && license_effective_range
+  )
+select *
+from effective_ranges;
+
+drop function get_rows(timestamp with time zone) ;
+
+create or replace function get_rows(timestamp with time zone) 
+returns setof movie_history_vw as 
+$$
+declare
+  r record;
+  query text;
+begin
+  return query
+    select * 
+    from movie_history_vw 
+    where license_effective @> $1 
+    and movie_effective @> $1;
+end
+$$ language 'plpgsql';
+
+
+
+
+select * from movies$a;
+
+insert into movies (id, title) values (1, 'Star Wars');
+
+insert into movies (id, title) values (2, 'Star Wars II');
+
+insert into licenses (id, movie_id, title) values (1, 1, 'Test License');
+insert into licenses (id, movie_id, title) values (2, 2, 'Test License');
+
+update licenses 
+set title = 'Test License II'
+where id = 2;
+
+delete from licenses;
+delete from movies;
+
+
+
+select * from movie_history_vw;
+
+select * from movies$a;
+
+select * from get_rows(now());
