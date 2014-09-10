@@ -256,24 +256,20 @@
 				</section>
 
 				<section data-transition="fade">
-					<h2>Data Model</h2>
+					<h2>Data Model (1 of 3)</h2>
 					<p>
 					<pre><code data-trim class="sql">
-create table movies (title text);
+create table movies (
+  id int primary key, 
+  title text);
 
-create table movies$a (title text, audit_date timestamp(3));
-
-create trigger movies$t
-  after insert on movies 
-  for each row execute procedure audit();
-
-create function audit() returns trigger
-language plpgsql AS $$
-begin
-  execute
-    'insert into movies$a (text, audit_date) values ($1.text, $2);'
-end;
-$$;
+create table licenses (
+  id int primary key,
+  movie_id int references movies (id),
+  title text, 
+  start_date timestamp, 
+  end_date timestamp
+);
 					</code></pre>
 					</p>
 
@@ -285,6 +281,72 @@ $$;
 							* where is 'new'
 					</aside>
 				</section>
+
+					<section data-transition="fade">
+					<h2>Data Model (2 of 3)</h2>
+					<p>
+					<pre><code data-trim class="sql">
+create table movies$a (
+  id int, 
+  title text, 
+  audit_date timestamp(3));
+
+create table licenses$a (
+  id int primary key,
+  movie_id int references movies (id),
+  title text, 
+  start_date timestamp, 
+  end_date timestamp,
+  audit_date timestamp(3)
+);
+					</code></pre>
+					</p>
+
+					<aside class="notes">
+              * You can build this with logic but it will be a little slow
+              * Create one trigger per operation (insert / update / delete)
+              * Create one trigger per table (generate SQL)
+              * Do we need to force immutability with permissions?
+							* where is 'new'
+					</aside>
+				</section>
+
+
+					<section data-transition="fade">
+					<h2>Data Model (3 of 3)</h2>
+					<p>
+					<pre><code data-trim class="sql">
+create or replace function audit_movie() returns trigger
+language plpgsql AS $$
+begin
+  execute
+    'insert into movies$a (id, title, audit_date)
+     values ($1.id, $1.title, $2);'
+  using new, now();
+
+  return null;
+end;
+$$;
+
+create trigger movies$t
+  after insert on movies 
+  for each row execute procedure audit_movie();
+					</code></pre>
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+
+					<section data-transition="fade">
+					<h2>Data Model (3 of 3)</h2>
+					<p>
+					<img src="pgadmin.png" />
+					</p>
+					<aside class="notes">
+					</aside>
+				</section>
+
 
 				<section data-transition="fade">
 					<h2>SQL Templates</h2>
