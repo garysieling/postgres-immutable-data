@@ -13,7 +13,7 @@
 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/theme/default.css" id="theme">
 
 		<!-- For syntax highlighting -->
@@ -36,6 +36,45 @@
 	width: 150%;
 	max-height: 150%;
   position:relative;
+}
+
+
+.reveal pre code {
+	padding: 5px;
+	overflow: auto;
+	max-height: 600px;
+	word-wrap: normal;
+}
+.reveal pre.stretch code {
+	height: 100%;
+	max-height: 100%;
+
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
+}
+
+
+.reveal .slides>section,
+.reveal .slides>section>section {
+	width: 104%;
+}
+
+
+.reveal pre {
+	display: block;
+	position: relative;
+	width: 90%;
+	margin: 15px auto;
+
+	text-align: left;
+	font-size: 0.70em;
+	font-family: monospace;
+	line-height: 1.1em;
+
+	word-wrap: break-word;
+
+	box-shadow: 0px 0px 6px rgba(0,0,0,0.3);
 }
 
 		</style>
@@ -251,7 +290,8 @@ $$;
 					<h2>SQL Templates</h2>
 					<p>
 					<pre><code data-trim class="sql">
-table_name = current_schema || '.' || format('%I', tables.table_name);
+table_name := 
+  current_schema || '.' || format('%I', tables.table_name);
 
 table_sql := 
   format(
@@ -431,13 +471,13 @@ where audit_data.audit_txid = 517093
       per_column('
   ${column} = 
     (case when 
-      (audit_data.${column} <> prior.${column}) or
-      (audit_data.${column} is null and prior.${column} is not null) or 
-      (audit_data.${column} is not null and audit_data.${column} is null)
+      (audit.${column} <> prior.${column}) or
+      (audit.${column} is null and prior.${column} is not null) or 
+      (audit.${column} is not null and prior.${column} is null)
     then prior.${column} 
-    else audit_data.${column} 
+    else audit.${column} 
     end)', ', ', 
-    current_schema::varchar, tables.table_name, reserved_columns))
+    current_schema, tables.table_name, reserved_columns))
 </code></pre>
 					<aside class="notes">
             * Things to note: comment at the beginning
