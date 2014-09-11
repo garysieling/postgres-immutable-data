@@ -571,9 +571,9 @@ where audit_data.audit_txid = 517093
 					<p>
 					<pre><code data-trim>
 select
-  id, title
+  id, movie_title, license_start, license_end
 from
-  movies_vw
+  movie_history_vw
 where 
   effective <@ (now() - interval '1 day')
 					</code></pre>
