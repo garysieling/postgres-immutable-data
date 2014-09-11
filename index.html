@@ -669,7 +669,7 @@ and license_effective @> (now() - interval '1 day')
 					<h2>Time Travelling Debugger (6 of 6)</h2>
 <pre><code data-trim class="sql">  
 
-create or replace function get_rows(timestamp with time zone) 
+create or replace function movie_history(timestamp with time zone) 
 returns setof movie_history_vw as 
 $$
 declare
@@ -684,7 +684,7 @@ begin
 end
 $$ language 'plpgsql';
 
-select * from get_rows(now() - interval '1 day');
+select * from movie_history(now() - interval '1 day');
 </code></pre>
 					<aside class="notes">
 
