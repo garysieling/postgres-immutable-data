@@ -370,7 +370,8 @@ into v_context;
 					<pre><code data-trim class="sql">
 table_sql := 
   format(
-    'create table %s$a
+    '-- audit table creation
+create table %s$a
      as select t.*, 
        null::text(1) audit_action,
        null::text audit_request,
@@ -393,6 +394,7 @@ table_sql :=
 					<h2>SQL Templates (2 of 2)</h2>
 					<p>
 						<ul>
+							<li>Unique comment on each query</li>
 							<li>Commit output to version control</li>
 							<li>%I for identifiers</li>							
 							<li>Functions to map column lists to text</li>
@@ -465,7 +467,7 @@ where title$r = 1
 				</section>
 
 				<section data-transition="fade">
-					<h2>Undo (1 of 4)</h2>	
+					<h2>Undo (1 of 3)</h2>	
         	<p>
              <ul>
                <li>Infrequent data changes (fix output of software)</li>
@@ -481,7 +483,7 @@ where title$r = 1
 			  </section>
 
 				<section data-transition="fade">
-					<h2>Undo (2 of 4)</h2>
+					<h2>Undo (2 of 3)</h2>
           	<pre><code data-trim class="sql">
 -- undo query
 with prior as (
@@ -497,13 +499,12 @@ with prior as (
 update ...
 </code></pre>
 					<aside class="notes">
-           4
 					</aside>
 				</section>
 				
 
 				<section data-transition="fade">
-					<h2>Undo (3 of 4)</h2>
+					<h2>Undo (3 of 3)</h2>
           	<pre><code data-trim class="sql">
 -- undo query
 with prior as (...)
@@ -525,33 +526,7 @@ where audit_data.audit_txid = 517093
            
 					</aside>
 				</section>
-				
 
-
-				<section data-transition="fade">
-					<h2>Undo (4 of 4)</h2>
-          	<pre><code data-trim class="sql">
- format('--insert sql here--',
-      per_column('
-  ${column} = 
-    (case when 
-      (audit.${column} <> prior.${column}) or
-      (audit.${column} is null and prior.${column} is not null) or 
-      (audit.${column} is not null and prior.${column} is null)
-    then prior.${column} 
-    else audit.${column} 
-    end)', ', ', 
-    current_schema, tables.table_name, reserved_columns))
-</code></pre>
-					<aside class="notes">
-            * Things to note: comment at the beginning
-            * Previous code was impossible to read
-            * Need function oriented code (array -> string)
-            * Needs to work by taking working sql -> templatize
-            * Need to run build script, backup schema, checkin
-					</aside>
-				</section>
-				
         <section data-transition="fade">
 					<h2>Principals for Data Corrections</h2>
 					<ul>
