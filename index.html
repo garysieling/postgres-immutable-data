@@ -575,7 +575,7 @@ select
 from
   movies_vw
 where 
-  effective <@ now()
+  effective <@ (now() - interval '1 day')
 					</code></pre>
 
 					</p>
@@ -657,8 +657,8 @@ with
   overlapping_ranges as (...)
 select *
 from effective_ranges
-where movie_effective @> now()
-and license_effective @> now()
+where movie_effective @> (now() - interval '1 day')
+and license_effective @> (now() - interval '1 day')
 </code></pre>
 					<aside class="notes">
 
@@ -684,7 +684,7 @@ begin
 end
 $$ language 'plpgsql';
 
-select * from get_rows(now());
+select * from get_rows(now() - interval '1 day');
 </code></pre>
 					<aside class="notes">
 
