@@ -189,27 +189,22 @@
 					</aside>
 				</section>
 
-
-
       	<section data-transition="fade">
 					<h2>Overview (2 of 2)</h2>
 					<p>
 					<ul>
 						<li>Database Design Considerations</li>
+						<li>Coding Style</li>
 						<li>Example Functionality</li>
 						<li>Lessons Learned</li>
 					</p>
 
 					<aside class="notes">
-            * The recent renewal of interest of functional programming in the software development community has spurred interest in immutable data structures, especially in databases.
-            * Post postgres conference - I saw a lot of people were interested in auditing from a banking perspective
-            * I'm in pharma
-            * Inspiration - combining these gives you ways you can help other teams save a lot of time           
 					</aside>
 				</section>
 
         <section data-transition="fade">
-					<h2>Design Considerations (1 of 4)</h2>
+					<h2>Design Considerations (1 of 9)</h2>
 					<p>
             <img src="git-extensions-history.png" />
 					</p>
@@ -218,45 +213,8 @@
 					</aside>
         </section>
 
-        <section data-transition="fade">
-					<h2>Design Considerations (2 of 4)</h2>
-					<p>
-            <img src="git-extensions-commands.png" />
-					</p>
-
-					<aside class="notes">
-					</aside>
-				</section>
-
-
-        <section data-transition="fade">
-					<h2>Design Considerations (3 of 4)</h2>
-					<p>
-            <img src="wp-audit-log.png" />
-					</p>
-
-					<aside class="notes">
-					</aside>
-				</section>
-        
-
-        <section data-transition="fade">
-					<h2>Design Considerations (4 of 4)</h2>
-					<p>
-             <ul>
-               <li>Request context (user/guid)</li>
-               <li>Usage (current vs historical)</li>
-               <li>Storage (deltas vs full data)</li>               
-               <li>Manner of use (readonly production access vs. planned)</li>               
-             </ul>
-					</p>
-
-					<aside class="notes">
-					</aside>
-				</section>
-
 				<section data-transition="fade">
-					<h2>Data Model (1 of 3)</h2>
+					<h2>Design Considerations (2 of 9)</h2>
 					<p>
 					<pre><code data-trim class="sql">
 create table movies (
@@ -283,7 +241,7 @@ create table licenses (
 				</section>
 
 					<section data-transition="fade">
-					<h2>Data Model (2 of 3)</h2>
+					<h2>Design Considerations (3 of 9)</h2>
 					<p>
 					<pre><code data-trim class="sql">
 create table movies$a (
@@ -311,17 +269,16 @@ create table licenses$a (
 					</aside>
 				</section>
 
-
 					<section data-transition="fade">
-					<h2>Data Model (3 of 3)</h2>
+					<h2>Design Considerations (4 of 9)</h2>
 					<p>
 					<pre><code data-trim class="sql">
 create or replace function audit_movie_insert() returns trigger
 language plpgsql AS $$
 begin
   execute
-    'insert into movies$a (id, title, audit_date)
-     values ($1.id, $1.title, $2);'
+    'insert into movies$a (id, title, audit_date, audit_action)
+     values ($1.id, $1.title, $2, ''I'');'
   using new, now();
 
   return null;
@@ -329,7 +286,7 @@ end;
 $$;
 
 create trigger movies$t
-  after insert or update on movies 
+  after insert on movies 
   for each row execute procedure audit_movie_insert();
 					</code></pre>
 					</p>
@@ -339,7 +296,7 @@ create trigger movies$t
 				</section>
 
 					<section data-transition="fade">
-					<h2>Data Model (3 of 3)</h2>
+					<h2>Design Considerations (5 of 9)</h2>
 					<p>
 					<img src="pgadmin.png" />
 					</p>
@@ -347,37 +304,18 @@ create trigger movies$t
 					</aside>
 				</section>
 
-
-				<section data-transition="fade">
-					<h2>SQL Templates</h2>
+        <section data-transition="fade">
+					<h2>Design Considerations (6 of 9)</h2>
 					<p>
-					<pre><code data-trim class="sql">
-table_name := 
-  current_schema || '.' || format('%I', tables.table_name);
-
-table_sql := 
-  format(
-    'create table %s$a
-     as select t.*, 
-       null::text(1) audit_action,
-       null::text audit_request,
-       null::bigint audit_txid,
-       null::text audit_user, 
-       null::timestamp audit_date
-     from %s t 
-     where 0 = 1',
-     table_name,
-     table_name
-);
-					</code></pre>
+            <img src="git-extensions-commands.png" />
 					</p>
 
 					<aside class="notes">
 					</aside>
 				</section>
-
+				
         <section data-transition="fade">
-					<h2>Data Sources</h2>
+					<h2>Design Considerations (7 of 9)</h2>
 					<p>
           <pre><code data-trim class="sql">
 select txid_current(); 
@@ -399,6 +337,72 @@ into v_context;
             * application_name lets you inject context - could be current user or request guid             
 					</aside>
 				</section>
+
+        <section data-transition="fade">
+					<h2>Design Considerations (8 of 9)</h2>
+					<p>
+            <img src="wp-audit-log.png" />
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+        
+
+        <section data-transition="fade">
+					<h2>Design Considerations (9 of 9)</h2>
+					<p>
+             <ul>
+               <li>Request context (user/guid)</li>
+               <li>Usage (current vs historical)</li>
+               <li>Storage (deltas vs full data)</li>               
+               <li>Manner of use (readonly production access vs. planned)</li>               
+             </ul>
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>SQL Templates (1 of 2)</h2>
+					<p>
+					<pre><code data-trim class="sql">
+table_sql := 
+  format(
+    'create table %s$a
+     as select t.*, 
+       null::text(1) audit_action,
+       null::text audit_request,
+       null::bigint audit_txid,
+       null::text audit_user, 
+       null::timestamp audit_date
+     from %I t 
+     where 0 = 1',
+     table_name,
+     table_name
+);
+					</code></pre>
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>SQL Templates (2 of 2)</h2>
+					<p>
+						<ul>
+							<li>Commit output to version control</li>
+							<li>%I for identifiers</li>							
+							<li>Functions to map column lists to text</li>
+						</ul>
+					</p>
+
+					<aside class="notes">
+					</aside>
+				</section>				
+
 			
        	<section data-transition="fade">
 					<h2>Example Functionality</h2>	
@@ -707,7 +711,6 @@ select * from movie_history(now() - interval '1 day');
 					</aside>
 				</section>
 				
-	
 				<section data-transition="fade">
 					<h2>Unindexed Data (1 of 2)</h2>
 					<ul>
