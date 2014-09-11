@@ -565,7 +565,7 @@ where audit_data.audit_txid = 517093
 				</section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (1 of 6)</h2>
+					<h2>Time Travelling Debugger (1 of 7)</h2>
 					<p>
 					<pre><code data-trim>
 select
@@ -584,7 +584,7 @@ where
 
         
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (1 of 6)</h2>
+					<h2>Time Travelling Debugger (2 of 7)</h2>
 					<p>
 				  <img src="time.png" />
 					</p>
@@ -595,7 +595,7 @@ where
 
 
         <section data-transition="fade">
-					<h2>Time Travelling Debugger (2 of 6)</h2>
+					<h2>Time Travelling Debugger (3 of 7)</h2>
 					<pre><code data-trim class="sql">          
 select
   tstzrange(
@@ -618,7 +618,7 @@ window w_m as (partition by m.id order by m.audit_date asc)
         </section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (3 of 6)</h2>
+					<h2>Time Travelling Debugger (4 of 7)</h2>
 <pre><code data-trim class="sql">                      
 with 
   effective_dates as (...),
@@ -638,7 +638,7 @@ from effective_dates
 				</section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (4 of 6)</h2>
+					<h2>Time Travelling Debugger (5 of 7)</h2>
 <pre><code data-trim class="sql">                      
 with 
   effective_dates as (...),
@@ -654,7 +654,7 @@ where movie_effective && license_effective_range
 				</section>
 
 	<section data-transition="fade">
-					<h2>Time Travelling Debugger (5 of 6)</h2>
+					<h2>Time Travelling Debugger (6 of 7)</h2>
 <pre><code data-trim class="sql">  
 create view movie_history_vw as
 with 
@@ -672,7 +672,7 @@ and license_effective @> (now() - interval '1 day')
 				</section>
 				
 	<section data-transition="fade">
-					<h2>Time Travelling Debugger (6 of 6)</h2>
+					<h2>Time Travelling Debugger (7 of 7)</h2>
 <pre><code data-trim class="sql">  
 
 create or replace function movie_history(timestamp with time zone) 
@@ -700,30 +700,30 @@ select * from movie_history(now() - interval '1 day');
       	<section data-transition="fade">
 					<h2>Lessons Learned</h2>
 					<ul>
-						<li>Indexing audit history</li>
-						<li>Working with unindexed data</li>
-						<li>Testing SQL</li>
+						<li>Performance</li>
+						<li>Testing</li>
 					</ul>
 				 	<aside class="notes">
 					</aside>
 				</section>
-
-
-      	<section data-transition="fade">
-					<h2>Indexing</h2>
-					<ul>
-						<li>Unindexed data</li>
-						<li>Indexing strategy - Datomic</li>
-						<li>Full text search - Splunk</li>
-					</ul>
-				 	<aside class="notes">
-					</aside>
-				</section>
-
 				
+	
 				<section data-transition="fade">
-					<h2>Unindexed Data</h2>
+					<h2>Unindexed Data (1 of 2)</h2>
 					<ul>
+						<li>Data queried infrequently</li>
+						<li>Used in ad hoc fashion</li>
+						<li>End user experience is important</li>						
+						<li>Indexes add operations overhead</li>
+					</ul>
+				 	<aside class="notes">
+					</aside>
+				</section>
+
+				<section data-transition="fade">
+					<h2>Unindexed Data (2 of 2)</h2>
+					<ul>
+						<li>Create indexes as needed</li>
 						<li>Single pass algorithms</li>
 						<li>Filter queries as soon as possible</li>
 						<li>Use 'except' to compare queries</li>
