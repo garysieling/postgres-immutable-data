@@ -486,15 +486,16 @@ where title$r = 1
 					<h2>Undo (2 of 3)</h2>
           	<pre><code data-trim class="sql">
 -- undo query
-with prior as (
-  select rank() over w,
-         audit_data.*         
-  from tenant1.movies$a audit_data
-  where audit_data.audit_txid = 517093 
-  window w as (partition by id order by audit_date desc)
-  order by 1 
-  offset 1 
-  limit 1
+with change as (
+  select array_agg(title) title, id
+  from (
+    select id, title
+    from movies$a audit_data
+    where audit_data.audit_txid <= 257157
+    order by audit_txid desc
+    limit 2
+  ) a
+  group by id
 )
 update ...
 </code></pre>
@@ -507,20 +508,19 @@ update ...
 					<h2>Undo (3 of 3)</h2>
           	<pre><code data-trim class="sql">
 -- undo query
-with prior as (...)
-update movies$a audit_data
+with change as (...)
+update movies
 set 
   title = 
     (case when 
-      (audit_data.title <> prior.title) or
-      (audit_data.title is null and prior.title is not null) or 
-      (audit_data.title is not null and audit_data.title is null)
-    then prior.title 
-    else audit_data.title 
-    end),
-  ...
-from prior
-where audit_data.audit_txid = 517093
+      (change.title[1] <> change.title[2]) or
+      (change.title[1] is null and change.title[2] is not null) or 
+      (change.title[1] is not null and change.title[2] is null)
+    then change.title[2]
+    else movies.title 
+    end)
+from change
+where movies.id = change.id;
 </code></pre>
 					<aside class="notes">
            
