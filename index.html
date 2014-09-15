@@ -574,16 +574,14 @@ where
 					<h2>Time Travelling Debugger (3 of 7)</h2>
 					<pre><code data-trim class="sql">          
 select
+  m.id, m.title, m.audit_action,
   tstzrange(
     coalesce(m.audit_date, '-infinity'), 
     coalesce(lead(m.audit_date) over w_m, 'infinity'),
     '[)'
-  ) movie_effective,
-  ...
+  ) movie_effective 
 from movies$a m
-full outer join licenses$a l on l.movie_id = m.id
 window w_m as (partition by m.id order by m.audit_date asc)
-       w_l as (partition by l.id order by l.audit_date asc)
 					</code></pre>
 				 	<aside class="notes">
 						* Note open / closed ranges
