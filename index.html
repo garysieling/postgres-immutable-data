@@ -423,8 +423,8 @@ create table %s$a
 	<section data-transition="fade">
 					<h2>Demo - Blame Tool (1 of 3)</h2>
           <pre><code data-trim class="sql">
-select a.*
-      (title <> lag(title) over w) title$c,
+select a.*,
+      (title <> lag(title) over w) title$c
 from movies$a a
 where audit_action in ('I', 'U')
 window w as (partition by id order by audit_date desc)
