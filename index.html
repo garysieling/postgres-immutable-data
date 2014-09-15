@@ -486,19 +486,19 @@ select * from ranked where r = 1
 					<h2>Undo (2 of 3)</h2>
           	<pre><code data-trim class="sql">
 -- undo query
-with change as (
-  select array_agg(title) title, id
-  from (
-    select id, title
-    from movies$a audit_data
-    where audit_data.audit_txid <= 257157
-    order by audit_txid desc
-    limit 2
-  ) a
-  group by id
-)
+select array_agg(title) title,
+       array_agg(audit_txid) audit_txid,
+       id
+from (
+  select audit_txid, id, title
+  from movies$a audit_data
+  where audit_data.audit_txid <= 324101
+  order by audit_txid desc
+) a
+group by id
 update ...
 </code></pre>
+<img src="undo-2.png" />    
 					<aside class="notes">
 					</aside>
 				</section>
@@ -507,20 +507,17 @@ update ...
 				<section data-transition="fade">
 					<h2>Undo (3 of 3)</h2>
           	<pre><code data-trim class="sql">
--- undo query
-with change as (...)
 update movies
 set 
   title = 
     (case when 
-      (change.title[1] <> change.title[2]) or
-      (change.title[1] is null and change.title[2] is not null) or 
-      (change.title[1] is not null and change.title[2] is null)
+      ne(change.title[1], change.title[2])
     then change.title[2]
     else movies.title 
     end)
 from change
-where movies.id = change.id;
+where movies.id = change.id
+  and audit_txid[1] = 324101;
 </code></pre>
 					<aside class="notes">
            
