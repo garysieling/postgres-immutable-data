@@ -423,12 +423,18 @@ create table %s$a
 	<section data-transition="fade">
 					<h2>Demo - Blame Tool (1 of 3)</h2>
           <pre><code data-trim class="sql">
-select a.*,
-      (title <> lag(title) over w) title$c
-from movies$a a
-where audit_action in ('I', 'U')
-window w as (partition by id order by audit_date desc)
+select audit_user, 
+  audit_request, 
+  audit_txid, 
+  audit_date, 
+  audit_action,
+  id, 
+  (case when audit_action = 'D' then null else title end) title,
+  lag(title) over w title$prev
+from movies$a a 
+window w as (partition by id order by audit_date asc)
 </code></pre>
+<img src="blame-1.png" />    
 					<aside class="notes">
 					</aside>
 				</section>
@@ -437,18 +443,13 @@ window w as (partition by id order by audit_date desc)
 					<h2>Demo - Blame Tool (2 of 3)</h2>
           <pre><code data-trim class="sql">
 with history as (...)
-
 select history.*,
-  (case when (title <> lag(title) over y) 
-   then audit_user else null end) title$u, 
-  dense_rank() over y title$r
-
+       dense_rank() over w as r
 from history
-
-window y as (
-  partition by id order by audit_date desc, title$c desc)
-) b
+where ne(title, title$prev) 
+window w as (partition by id order by audit_date desc)
 </code></pre>
+<img src="blame-2.png" />    
 					<aside class="notes">
 					</aside>
 				</section>
@@ -457,11 +458,10 @@ window y as (
 					<h2>Demo - Blame Tool (3 of 3)</h2>
           <pre><code data-trim class="sql">
 with history as (...),
-     ordered_history as (...)
-select * 
-from ordered_history 
-where title$r = 1
+ranked as (...)
+select * from ranked where r = 1
 </code></pre>
+<img src="blame-3.png" />    
 					<aside class="notes">
 					</aside>
 				</section>
