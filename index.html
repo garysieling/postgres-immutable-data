@@ -676,6 +676,7 @@ with movies_history as (...),
      joined_history as (...)
 where movie_effective @> (now() - interval '1 day')
 </code></pre>
+					<img src="debugger-7.png" />				
 					<aside class="notes">
 
 					</aside>
@@ -696,7 +697,6 @@ begin
     select * 
     from movie_history_vw 
     where license_effective @> $1 
-    and movie_effective @> $1;
 end
 $$ language 'plpgsql';
 
