@@ -541,7 +541,7 @@ where movies.id = change.id
 				</section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (1 of 7)</h2>
+					<h2>Time Travelling Debugger (1 of 8)</h2>
 					<p>
 					<pre><code data-trim>
 select
@@ -560,7 +560,7 @@ where
 
         
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (2 of 7)</h2>
+					<h2>Time Travelling Debugger (2 of 8)</h2>
 					<p>
 				  <img src="time.png" />
 					</p>
@@ -571,10 +571,10 @@ where
 
 
         <section data-transition="fade">
-					<h2>Time Travelling Debugger (3 of 7)</h2>
+					<h2>Time Travelling Debugger (3 of 8)</h2>
 					<pre><code data-trim class="sql">          
 select
-  m.id, m.title, m.audit_action,
+  m.id, m.title,
   tstzrange(
     coalesce(m.audit_date, '-infinity'), 
     coalesce(lead(m.audit_date) over w_m, 'infinity'),
@@ -583,6 +583,7 @@ select
 from movies$a m
 window w_m as (partition by m.id order by m.audit_date asc)
 					</code></pre>
+					<img src="debugger-3.png" />
 				 	<aside class="notes">
 						* Note open / closed ranges
             * Note finding next row in range
@@ -592,35 +593,74 @@ window w_m as (partition by m.id order by m.audit_date asc)
         </section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (4 of 7)</h2>
+					<h2>Time Travelling Debugger (4 of 8)</h2>
 <pre><code data-trim class="sql">                      
-with 
-  effective_dates as (...),
 select
-  coalesce(
-    license_effective, 
-    tstzrange('-infinity', 'infinity', '[]')) 
-  as license_effective_range,
-  effective_dates.*
-from effective_dates
+  l.id, l.title, movie_id,
+  tstzrange(
+    coalesce(l.audit_date, '-infinity'), 
+    coalesce(lead(l.audit_date) over w_l, 'infinity'),
+    '[)'
+  ) license_effective  
+from licenses$a l
+window w_l as (partition by l.id order by l.audit_date asc)
 					</code></pre>
+					<img src="debugger-4.png" />
 					<aside class="notes">
-						* TODO: create license
+  				</aside>
+				</section>
+
+
+				<section data-transition="fade">
+					<h2>Time Travelling Debugger (4 of 8)</h2>
+<pre><code data-trim class="sql">                      
+with movies_history as (...),
+licenses_history as (...)
+select m.id, m.title, l.id, l.title,
+       movie_effective,
+       coalesce(l.license_effective, '[-infinity,infinity]') license_effective
+from movies_history m
+left join licenses_history l
+on l.movie_id = m.id 
+					</code></pre>
+					<img src="debugger-4.png" />
+					<aside class="notes">
+  				</aside>
+				</section>
+
+
+				<section data-transition="fade">
+					<h2>Time Travelling Debugger (5 of 8)</h2>
+<pre><code data-trim class="sql">                      
+with movies_history as (...),
+licenses_history as (...)
+select m.id, m.title, l.id, l.title,
+  movie_effective,
+  coalesce(l.license_effective, '[-infinity,infinity]') license_effective
+from movies_history m
+left join licenses_history l
+on l.movie_id = m.id
+					</code></pre>
+					<img src="debugger-5.png" />				
+					<aside class="notes">
             * We're on 9.1 - don't have ranges
             * Could update these in audit data
 					</aside>
 				</section>
 
 				<section data-transition="fade">
-					<h2>Time Travelling Debugger (5 of 7)</h2>
+					<h2>Time Travelling Debugger (6 of 8)</h2>
 <pre><code data-trim class="sql">                      
-with 
-  effective_dates as (...),
-  effective_ranges as (...)
-select *
-from effective_ranges
-where movie_effective && license_effective_range
+with movies_history as (...),
+     licenses_history as (...),
+     joined_history as (...)
+select 
+  movie_id, movie_title, license_id, license_title,
+  movie_effective * license_effective effective
+from joined_history
+where movie_effective && license_effective
 					</code></pre>
+					<img src="debugger-6.png" />				
 					<aside class="notes">
             * We're on 9.1 - don't have ranges
             * Could update these in audit data
@@ -628,17 +668,13 @@ where movie_effective && license_effective_range
 				</section>
 
 	<section data-transition="fade">
-					<h2>Time Travelling Debugger (6 of 7)</h2>
+					<h2>Time Travelling Debugger (7 of 8)</h2>
 <pre><code data-trim class="sql">  
-create view movie_history_vw as
-with 
-  effective_dates as (...),
-  effective_ranges as (...),
-  overlapping_ranges as (...)
-select *
-from effective_ranges
+create view movie_history_vw as 
+with movies_history as (...),
+     licenses_history as (...),
+     joined_history as (...)
 where movie_effective @> (now() - interval '1 day')
-and license_effective @> (now() - interval '1 day')
 </code></pre>
 					<aside class="notes">
 
@@ -646,7 +682,7 @@ and license_effective @> (now() - interval '1 day')
 				</section>
 				
 	<section data-transition="fade">
-					<h2>Time Travelling Debugger (7 of 7)</h2>
+					<h2>Time Travelling Debugger (8 of 8)</h2>
 <pre><code data-trim class="sql">  
 
 create or replace function movie_history(timestamp with time zone) 
