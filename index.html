@@ -610,25 +610,6 @@ window w_l as (partition by l.id order by l.audit_date asc)
   				</aside>
 				</section>
 
-
-				<section data-transition="fade">
-					<h2>Time Travelling Debugger (4 of 8)</h2>
-<pre><code data-trim class="sql">                      
-with movies_history as (...),
-licenses_history as (...)
-select m.id, m.title, l.id, l.title,
-       movie_effective,
-       coalesce(l.license_effective, '[-infinity,infinity]') license_effective
-from movies_history m
-left join licenses_history l
-on l.movie_id = m.id 
-					</code></pre>
-					<img src="debugger-4.png" />
-					<aside class="notes">
-  				</aside>
-				</section>
-
-
 				<section data-transition="fade">
 					<h2>Time Travelling Debugger (5 of 8)</h2>
 <pre><code data-trim class="sql">                      
